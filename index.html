@@ -1,0 +1,2345 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Аналитика качества · АО «Завод Продмаш»</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+:root {
+  --navy:#0d2f5e; --blue:#1a4a8a; --sky:#2e7abf; --cyan:#3ec6d4;
+  --orange:#e8712a; --peach:#f59c4e;
+  --dark:#2d3748; --mid:#718096; --light:#d1d9e6;
+  --bg:#f0f4f9; --white:#ffffff;
+  --green:#27ae60; --red:#e74c3c; --purple:#7c3aed; --teal:#0d9488; --yellow:#f1c40f;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--dark); min-height: 100vh; }
+.header {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 55%, var(--sky) 100%);
+  padding: 20px 36px; color: #fff;
+  display: flex; justify-content: space-between; align-items: center;
+  box-shadow: 0 4px 24px rgba(13,47,94,.4);
+  position: sticky; top: 0; z-index: 50; flex-wrap: wrap; gap: 12px;
+}
+.brand-tag { font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--cyan); font-weight: 700; margin-bottom: 3px; }
+.brand-title { font-size: 22px; font-weight: 900; letter-spacing: .4px; }
+.brand-file { font-size: 12px; color: rgba(62,198,212,.7); margin-top: 3px; }
+.actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.btn { padding: 9px 18px; border-radius: 10px; border: 1.5px solid var(--cyan); background: transparent; color: var(--cyan); font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; transition: all .2s; }
+.btn:hover { background: rgba(62,198,212,.15); }
+.btn:disabled { opacity: .55; cursor: wait; }
+.btn-primary { background: var(--cyan); color: var(--navy); border-color: var(--cyan); font-weight: 800; }
+.btn-primary:hover { background: #5cd1de; }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(62,198,212,.4); border-top-color: var(--cyan); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle; margin-right: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.pdf-msg { font-size: 12px; color: var(--cyan); font-weight: 600; }
+
+.container { max-width: 1380px; margin: 0 auto; padding: 28px 20px; }
+
+.upload-zone { border: 2px dashed var(--light); border-radius: 20px; padding: 56px 32px; text-align: center; background: var(--white); cursor: pointer; margin-bottom: 24px; transition: all .2s; }
+.upload-zone:hover { border-color: var(--sky); background: rgba(46,122,191,.04); }
+.upload-zone h2 { color: var(--navy); margin-bottom: 10px; font-size: 21px; font-weight: 900; }
+.upload-zone p { color: var(--mid); font-size: 14px; line-height: 1.7; }
+.upload-icon { font-size: 54px; margin-bottom: 16px; }
+
+.busy-card { text-align: center; padding: 48px; background: var(--white); border-radius: 16px; margin-bottom: 24px; }
+.busy-card .icon { font-size: 40px; margin-bottom: 12px; }
+.busy-card p { color: var(--blue); font-weight: 800; font-size: 16px; }
+
+.error { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 12px; padding: 14px 18px; margin-bottom: 24px; color: var(--red); font-weight: 700; }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid var(--light); padding-bottom: 0; }
+.tab { padding: 12px 22px; background: transparent; border: none; border-bottom: 3px solid transparent; margin-bottom: -2px; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--mid); font-family: inherit; transition: all .15s; display: flex; align-items: center; gap: 8px; }
+.tab:hover { color: var(--sky); }
+.tab.active { color: var(--sky); border-bottom-color: var(--sky); }
+.tab-badge { background: var(--sky); color: #fff; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 800; min-width: 20px; text-align: center; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Archive */
+.archive-list { display: grid; gap: 12px; }
+.archive-item { background: var(--white); border: 1.5px solid var(--light); border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 16px; transition: all .15s; cursor: pointer; }
+.archive-item:hover { border-color: var(--sky); box-shadow: 0 4px 16px rgba(46,122,191,.12); transform: translateY(-1px); }
+.archive-item.selected { border-color: var(--sky); background: linear-gradient(145deg, rgba(46,122,191,.08), rgba(46,122,191,.02)); }
+.archive-check { width: 22px; height: 22px; border: 2px solid var(--light); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--white); font-size: 14px; color: transparent; font-weight: 900; transition: all .15s; }
+.archive-item.selected .archive-check { background: var(--sky); border-color: var(--sky); color: #fff; }
+.archive-info { flex: 1; min-width: 0; }
+.archive-name { font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.archive-meta { font-size: 12px; color: var(--mid); display: flex; gap: 14px; flex-wrap: wrap; }
+.archive-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.archive-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.archive-btn { padding: 6px 14px; border-radius: 8px; border: 1.5px solid var(--light); background: var(--white); font-size: 12px; font-weight: 700; color: var(--navy); cursor: pointer; font-family: inherit; transition: all .15s; }
+.archive-btn:hover { border-color: var(--sky); color: var(--sky); }
+.archive-btn.primary { background: var(--sky); color: #fff; border-color: var(--sky); }
+.archive-btn.primary:hover { background: var(--blue); }
+
+.archive-toolbar { background: linear-gradient(135deg, rgba(46,122,191,.08), rgba(46,122,191,.02)); border: 1px solid rgba(46,122,191,.2); border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.archive-toolbar-info { font-size: 14px; color: var(--navy); font-weight: 600; }
+.archive-toolbar-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.archive-empty { background: var(--white); border: 2px dashed var(--light); border-radius: 16px; padding: 48px 24px; text-align: center; }
+.archive-empty-icon { font-size: 48px; margin-bottom: 12px; opacity: .5; }
+.archive-empty p { color: var(--mid); font-size: 14px; }
+.archive-empty p b { color: var(--navy); }
+
+.archive-loading { background: var(--white); border-radius: 16px; padding: 48px; text-align: center; }
+
+/* Comparison */
+.cmp-head { background: linear-gradient(135deg, var(--purple), #5b21b6); color: #fff; padding: 20px 28px; border-radius: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.cmp-head h2 { font-size: 20px; font-weight: 900; margin: 0; }
+.cmp-head p { font-size: 13px; opacity: .9; margin-top: 4px; }
+.cmp-files { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.cmp-file-tag { background: rgba(255,255,255,.2); padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+
+.cmp-kpi-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-bottom: 24px; }
+.cmp-kpi-card { background: var(--white); border: 1px solid var(--light); border-radius: 12px; padding: 16px 20px; border-top: 3px solid var(--purple); }
+.cmp-kpi-title { font-size: 11px; color: var(--mid); text-transform: uppercase; letter-spacing: .8px; font-weight: 700; margin-bottom: 12px; }
+.cmp-kpi-rows { display: flex; flex-direction: column; gap: 8px; }
+.cmp-kpi-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: var(--bg); border-radius: 6px; }
+.cmp-kpi-name { font-size: 12px; color: var(--navy); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
+.cmp-kpi-val { font-size: 14px; font-weight: 800; color: var(--navy); flex-shrink: 0; }
+
+.kpi-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 28px; }
+.kpi { background: linear-gradient(145deg, rgba(46,122,191,.1), rgba(46,122,191,.04)); border: 1.5px solid rgba(46,122,191,.2); border-radius: 14px; padding: 16px 20px; border-left: 4px solid var(--sky); }
+.kpi-label { font-size: 11px; color: var(--mid); text-transform: uppercase; letter-spacing: .8px; font-weight: 700; margin-bottom: 6px; }
+.kpi-value { font-size: 24px; font-weight: 900; line-height: 1.1; }
+.kpi-unit { font-size: 12px; color: var(--mid); margin-top: 4px; }
+
+.section-head { margin: 36px 0 16px; }
+.section-head-row { display: flex; align-items: center; gap: 12px; }
+.section-num { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 15px; flex-shrink: 0; }
+.section-head h2 { font-size: 17px; font-weight: 900; color: var(--navy); letter-spacing: .3px; margin: 0; }
+.section-sub { margin: 8px 0 0 50px; font-size: 12px; color: var(--mid); }
+
+.card { background: var(--white); border-radius: 16px; padding: 22px 24px; box-shadow: 0 2px 20px rgba(13,47,94,.07); border: 1px solid var(--light); break-inside: avoid; page-break-inside: avoid; }
+.card-wide { grid-column: 1 / -1; }
+.card-title { font-size: 15px; font-weight: 800; color: var(--navy); margin: 0 0 16px; }
+.card-sub { font-size: 12px; color: var(--mid); margin-top: 4px; }
+.card-accent-top { border-top: 3px solid; }
+
+/* Each "pdf-section" is captured as one image and placed on its own PDF page(s) */
+.pdf-section { margin-bottom: 28px; }
+
+.grid-2 { display: grid; gap: 20px; grid-template-columns: 1fr 1fr; }
+.grid-1 { display: grid; gap: 20px; grid-template-columns: 1fr; }
+@media (max-width: 760px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.chart-box { position: relative; }
+
+.unit-shift-panel { margin-bottom: 28px; }
+.unit-shift-head { border-radius: 12px; padding: 14px 22px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+.unit-name { font-size: 18px; font-weight: 900; color: var(--navy); }
+.unit-sub { font-size: 12px; color: var(--mid); margin-top: 2px; }
+.unit-total { font-size: 22px; font-weight: 900; }
+.unit-total-sub { font-size: 11px; color: var(--mid); }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+table th { padding: 9px 12px; text-align: left; color: var(--mid); font-weight: 700; border-bottom: 2px solid var(--light); background: var(--bg); }
+table th.right, table td.right { text-align: right; }
+table td { padding: 9px 12px; color: var(--navy); border-bottom: 1px solid var(--light); }
+table tr.total-row { background: rgba(46,122,191,.06); font-weight: 800; }
+
+.color-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; vertical-align: middle; }
+
+/* Insight blocks */
+.insights-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); margin-bottom: 24px; }
+.insight-block { border-radius: 14px; padding: 18px 22px; border-left: 5px solid; }
+.insight-attention { background: #fef9e7; border-left-color: #d4a017; }
+.insight-attention h3 { color: #7d5a00; }
+.insight-monitor { background: #eff6ff; border-left-color: var(--sky); }
+.insight-monitor h3 { color: #1e40af; }
+.insight-positive { background: #f0fdf4; border-left-color: var(--green); }
+.insight-positive h3 { color: #166534; }
+.insight-action { background: #faf5ff; border-left-color: var(--purple); }
+.insight-action h3 { color: #6b21a8; }
+.insight-block h3 { font-size: 14px; font-weight: 800; margin-bottom: 10px; letter-spacing: .2px; }
+.insight-block ul { list-style: none; }
+.insight-block li { font-size: 13px; line-height: 1.6; color: var(--dark); margin-bottom: 8px; padding-left: 16px; position: relative; }
+.insight-block li::before { content: '▸'; position: absolute; left: 0; color: var(--mid); font-weight: 700; }
+.insight-block li b { color: var(--navy); }
+
+.qa-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+.qa-btn { padding: 10px 16px; border: 1.5px solid var(--light); background: var(--white); border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--navy); cursor: pointer; font-family: inherit; transition: all .15s; display: flex; align-items: center; gap: 8px; }
+.qa-btn:hover { border-color: var(--sky); background: rgba(46,122,191,.05); transform: translateY(-1px); }
+.qa-btn.active { background: linear-gradient(135deg, var(--blue), var(--sky)); color: #fff; border-color: var(--sky); }
+.qa-icon { font-size: 16px; }
+
+.answer-area { background: var(--bg); border-radius: 12px; padding: 20px 24px; font-size: 13.5px; line-height: 1.7; color: var(--dark); min-height: 120px; white-space: pre-wrap; border: 1px solid var(--light); }
+.answer-area.placeholder { color: var(--mid); font-style: italic; text-align: center; padding: 40px 24px; }
+.answer-area b, .answer-area strong { color: var(--navy); font-weight: 800; }
+.answer-area .ans-h { font-size: 15px; font-weight: 800; color: var(--navy); margin: 14px 0 8px; display: block; }
+.answer-area .ans-h:first-child { margin-top: 0; }
+.answer-area .ans-tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-right: 6px; vertical-align: middle; }
+.tag-orange { background: #ffedd5; color: #9a3412; }
+.tag-yellow { background: #fef3c7; color: #92400e; }
+.tag-green { background: #dcfce7; color: #166534; }
+.tag-blue { background: #dbeafe; color: #1e40af; }
+.ans-block { padding: 12px 16px; border-radius: 10px; margin: 10px 0; }
+.ans-block-action { background: rgba(124,58,237,.08); border-left: 3px solid var(--purple); }
+.ans-block-action b { color: #6b21a8; }
+.ans-list { margin: 8px 0; padding-left: 0; list-style: none; }
+.ans-list li { padding-left: 22px; position: relative; margin-bottom: 6px; }
+.ans-list li::before { content: '•'; position: absolute; left: 8px; color: var(--sky); font-weight: 800; font-size: 16px; }
+.ans-table { margin: 10px 0; }
+.ans-table td { padding: 6px 12px; font-size: 13px; }
+.ans-table td:first-child { font-weight: 600; color: var(--navy); }
+
+.footer { text-align: center; padding: 28px 0 12px; color: var(--mid); font-size: 12px; border-top: 1px solid var(--light); margin-top: 40px; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--light); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header" id="header">
+  <div>
+    <div class="brand-tag">АО «ЗАВОД ПРОДМАШ» · ОРСМК</div>
+    <div class="brand-title">📊 Аналитика несоответствий</div>
+    <div class="brand-file" id="fname"></div>
+  </div>
+  <div class="actions">
+    <span class="pdf-msg" id="pdfMsg" style="display:none;"><span class="spinner"></span><span id="pdfMsgText"></span></span>
+    <button class="btn" id="btnPDF" style="display:none;">📄 Скачать PDF</button>
+    <label class="btn btn-primary">
+      📂 Загрузить XLSX
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;" />
+    </label>
+  </div>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" data-tab="report">📊 Отчёт</button>
+    <button class="tab" data-tab="archive">📚 Архив файлов <span class="tab-badge" id="archBadge">0</span></button>
+    <button class="tab" data-tab="compare" id="cmpTab" style="display:none;">📑 Сравнение <span class="tab-badge" id="cmpBadge">0</span></button>
+  </div>
+</div>
+
+<div class="container" id="report">
+  <div class="tab-content active" id="tab-report">
+    <div class="upload-zone" id="dropZone">
+      <div class="upload-icon">📊</div>
+      <h2>Загрузите файл за месяц или квартал</h2>
+      <p>Перетащите .xlsx сюда или нажмите «Загрузить XLSX» вверху<br/>
+      Или выберите готовый файл из вкладки «📚 Архив файлов»</p>
+    </div>
+
+    <div id="busyZone" class="busy-card" style="display:none;">
+      <div class="icon">⚙️</div>
+      <p>Обрабатываем файл…</p>
+    </div>
+
+    <div id="errorZone" class="error" style="display:none;"></div>
+
+    <div id="dashboard"></div>
+  </div>
+
+  <div class="tab-content" id="tab-archive">
+    <div class="archive-toolbar">
+      <div class="archive-toolbar-info" id="archInfo">
+        <b>📚 Архив файлов</b> — выберите файлы галочкой для сравнения или откройте один
+      </div>
+      <div class="archive-toolbar-btns">
+        <button class="archive-btn" id="archSelAll">Выделить все</button>
+        <button class="archive-btn" id="archDeselAll">Снять выделение</button>
+        <button class="archive-btn primary" id="archCompare" disabled>📑 Сравнить выбранные</button>
+      </div>
+    </div>
+    <div id="archiveList"></div>
+  </div>
+
+  <div class="tab-content" id="tab-compare">
+    <div id="compareContent"></div>
+  </div>
+</div>
+
+<div class="footer">АО «Завод Продмаш» · ОРСМК · Система аналитики качества</div>
+
+<script>
+'use strict';
+
+// ─────────────────────────────────────────────────────────────────────────
+const C = {
+  navy:'#0d2f5e', blue:'#1a4a8a', sky:'#2e7abf', cyan:'#3ec6d4',
+  orange:'#e8712a', peach:'#f59c4e', dark:'#2d3748', mid:'#718096',
+  light:'#d1d9e6', white:'#ffffff', red:'#e74c3c', purple:'#7c3aed',
+  teal:'#0d9488', yellow:'#f1c40f', green:'#27ae60', amber: '#d4a017',
+};
+const PAL = [C.sky, C.orange, C.cyan, C.purple, '#16a085', '#e67e22', '#8e44ad', '#c0392b', C.teal, '#f39c12', C.navy, C.peach];
+const UNIT_COLORS = { 'УМИ':C.sky, 'УПН':C.orange, 'ЦГЦ':C.purple, 'Логистика':C.teal, 'ОЭУ':C.red, 'Не определено':C.mid };
+const MONTH_NAMES = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+
+const fmt = v => {
+  if (v == null || isNaN(v)) return '0';
+  const n = Number(v);
+  return n >= 1000
+    ? n.toLocaleString('ru-RU', { maximumFractionDigits: 0 })
+    : (n % 1 !== 0 ? n.toFixed(1).replace('.', ',') : String(Math.round(n)));
+};
+const fmtT = kg => (kg / 1000).toFixed(2).replace('.', ',') + ' т';
+const fmtPct = (v, total) => total > 0 ? ((v / total) * 100).toFixed(1) + '%' : '0%';
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ─────────────────────────────────────────────────────────────────────────
+// PARSING
+// ─────────────────────────────────────────────────────────────────────────
+const detectType = r => {
+  const src = String(r['Источник'] || '').trim().toLowerCase();
+  if (src === 'самоконтроль') return 'Самоконтроль';
+  if (src === 'карты') return 'Карта инспекц. контроля';
+  if (src === 'инспекционный') return 'Акт техн. контроля';
+  const num = String(r['Номер'] || '').toUpperCase();
+  if (num.startsWith('С') || num.startsWith('C')) return 'Самоконтроль';
+  if (num.startsWith('К') || num.startsWith('K')) return 'Карта инспекц. контроля';
+  if (num.startsWith('И') || num.startsWith('I')) return 'Акт техн. контроля';
+  return 'Не определено';
+};
+
+const corpusToUnit = n => {
+  if (n === 1 || n === 3) return 'ЦГЦ';
+  if (n === 7 || n === 13) return 'УПН';
+  if ([2, 4, 8, 11].includes(n)) return 'УМИ';
+  if (n === 9) return 'УМИ';
+  return null;
+};
+
+const detectUnit = place => {
+  if (!place) return 'Не определено';
+  const p = String(place).trim().toLowerCase();
+  if (p.includes('уми')) return 'УМИ';
+  if (p.includes('упн')) return 'УПН';
+  if (p.includes('цц') || p.includes('алмц') || p.includes('алцм') || p.includes('цгц')) return 'ЦГЦ';
+  if (p.includes('логистик') || p.includes('сгп') || p.includes('склад гот')) return 'Логистика';
+  if (p.includes('оэу')) return 'ОЭУ';
+  if (p === 'не определено' || p === '') return 'Не определено';
+  const m = p.match(/корпус\s*№?\s*(\d+)/);
+  if (m) return corpusToUnit(parseInt(m[1])) || 'Не определено';
+  return 'Не определено';
+};
+
+const detectCorpus = place => {
+  const m = String(place || '').toLowerCase().match(/корпус\s*№?\s*(\d+)/);
+  if (!m) return null;
+  const n = parseInt(m[1]);
+  if (n === 11) return 'корпус №11';
+  if (n === 9)  return 'корпус №9';
+  if (n === 8)  return 'корпус №8';
+  if (n === 4)  return 'корпус №4';
+  if (n === 2)  return 'корпус №2';
+  return null;
+};
+
+const normCrit = v => {
+  if (!v) return 'Не указано';
+  const s = String(v).trim().toLowerCase();
+  // Check for merge cases first: two distinct words separated by space
+  // "неустранимое устранимое" or "малозначительное устранимое" → "Устранимое"
+  if (/\bнеустранимое\b.*\bустранимое\b/.test(s) || /\bустранимое\b.*\bнеустранимое\b/.test(s)) return 'Устранимое';
+  if (/\bмалозначительное\b.*\bустранимое\b/.test(s) || /\bустранимое\b.*\bмалозначительное\b/.test(s)) return 'Устранимое';
+  // Single-word matches (exact)
+  if (s === 'неустранимое') return 'Неустранимое';
+  if (s === 'малозначительное') return 'Малозначительное';
+  if (s === 'устранимое') return 'Устранимое';
+  if (s.includes('в работе')) return 'В работе';
+  if (s.includes('отработка')) return 'Отработка технологии';
+  return String(v).trim();
+};
+
+const detectShift = v => {
+  if (v == null || v === '') return 'Не указано';
+  const s = String(v).trim();
+  if (!s) return 'Не указано';
+  if (s === 'Невозможно установить') return 'Не установлено';
+  if (s === 'В работе' || s.startsWith('Отработка')) return 'Не установлено';
+  const m = s.match(/Смена\s+([АБВабв])/);
+  if (m) return m[1].toUpperCase();
+  return 'Прочее';
+};
+
+const getMass = v => {
+  if (v == null) return 0;
+  if (typeof v === 'number') return isNaN(v) ? 0 : v;
+  const cleaned = String(v).replace(/[\s\u00A0]/g, '').replace(',', '.');
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+};
+
+const parseDate = v => {
+  if (!v) return null;
+  if (v instanceof Date) return v;
+  const s = String(v).trim();
+  let m = s.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (m) return new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1]));
+  m = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]));
+  return null;
+};
+
+const buildAnalytics = wb => {
+  const all = [];
+  wb.SheetNames.forEach(sn => {
+    const data = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval: null, raw: true });
+    data.forEach(r => all.push(r));
+  });
+  if (!all.length) return null;
+
+  const valid = all.filter(r => {
+    const num = String(r['Номер'] || '').toUpperCase();
+    return num && !num.startsWith('В') && !num.startsWith('B');
+  });
+
+  const lineCountByType = {}, massByType = {};
+  const uniqueActsByType = { 'Самоконтроль': new Set(), 'Карта инспекц. контроля': new Set(), 'Акт техн. контроля': new Set() };
+  let massOTK = 0, massProd = 0;
+  const massByUnit = {}, massByCorpus = {};
+  const massByDefect = {}, massByCrit = {}, massByProduct = {};
+  const massByNomen = {};
+  const shiftByUnit = {};
+  const causeCount = {}, detCount = {}, corrCount = {};
+  const massByDate = {};
+
+  // Monthly breakdown structure
+  const monthly = {}; // { 'YYYY-MM': { actsByType: {set per type}, massByType: {sum per type}, massTotal, label } }
+
+  valid.forEach(r => {
+    const t = detectType(r);
+    const m = getMass(r['Кол., кг']);
+    const place = r['Склад (место возникновения)'];
+    const unit = detectUnit(place);
+    const def = ((r['Вид несоответствия'] || 'Не указано') + '').trim();
+    const crit = normCrit(r['Критичность несоответствия']);
+    const prod = ((r['Группа номенклатуры'] || 'Не указано') + '').trim();
+    const nomen = ((r['Номенклатура'] || 'Не указано') + '').trim();
+    const shift = detectShift(r['Ответственная смена за несоответствие']);
+    const cause = r['Коренная причина возникновения'] && String(r['Коренная причина возникновения']).trim();
+    const det = r['Коренная причина необнаружения'] && String(r['Коренная причина необнаружения']).trim();
+    const corr = r['Корректирующие действия'] && String(r['Корректирующие действия']).trim();
+    const num = String(r['Номер']).toUpperCase();
+
+    lineCountByType[t] = (lineCountByType[t] || 0) + 1;
+    massByType[t] = (massByType[t] || 0) + m;
+    if (uniqueActsByType[t]) uniqueActsByType[t].add(num);
+
+    if (t === 'Самоконтроль') massProd += m; else massOTK += m;
+
+    massByUnit[unit] = (massByUnit[unit] || 0) + m;
+    if (unit === 'УМИ') {
+      const cor = detectCorpus(place) || 'Прочее';
+      massByCorpus[cor] = (massByCorpus[cor] || 0) + m;
+    }
+
+    massByDefect[def] = (massByDefect[def] || 0) + m;
+    massByCrit[crit] = (massByCrit[crit] || 0) + m;
+    massByProduct[prod] = (massByProduct[prod] || 0) + m;
+    massByNomen[nomen] = (massByNomen[nomen] || 0) + m;
+
+    if (!shiftByUnit[unit]) shiftByUnit[unit] = { total: 0, byShift: {}, byShiftProduct: {}, byShiftDefect: {} };
+    const uObj = shiftByUnit[unit];
+    uObj.total += m;
+    uObj.byShift[shift] = (uObj.byShift[shift] || 0) + m;
+    if (!uObj.byShiftProduct[shift]) uObj.byShiftProduct[shift] = {};
+    uObj.byShiftProduct[shift][prod] = (uObj.byShiftProduct[shift][prod] || 0) + m;
+    if (!uObj.byShiftDefect[shift]) uObj.byShiftDefect[shift] = {};
+    uObj.byShiftDefect[shift][def] = (uObj.byShiftDefect[shift][def] || 0) + m;
+
+    if (t !== 'Карта инспекц. контроля') {
+      if (cause) causeCount[cause] = (causeCount[cause] || 0) + 1;
+      if (det) detCount[det] = (detCount[det] || 0) + 1;
+      if (corr) corrCount[corr] = (corrCount[corr] || 0) + 1;
+    }
+
+    const d = parseDate(r['Дата']);
+    if (d && !isNaN(d.getTime())) {
+      const dayKey = d.toISOString().slice(0, 10);
+      massByDate[dayKey] = (massByDate[dayKey] || 0) + m;
+
+      const monKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      const monLabel = `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+      if (!monthly[monKey]) {
+        monthly[monKey] = {
+          label: monLabel,
+          actsByType: { 'Акт техн. контроля': new Set(), 'Карта инспекц. контроля': new Set(), 'Самоконтроль': new Set() },
+          massByType: { 'Акт техн. контроля': 0, 'Карта инспекц. контроля': 0, 'Самоконтроль': 0 },
+          massTotal: 0,
+          massOTK: 0, massProd: 0,
+        };
+      }
+      const mo = monthly[monKey];
+      if (mo.actsByType[t]) mo.actsByType[t].add(num);
+      mo.massByType[t] = (mo.massByType[t] || 0) + m;
+      mo.massTotal += m;
+      if (t === 'Самоконтроль') mo.massProd += m; else mo.massOTK += m;
+    }
+  });
+
+  const totalMass = valid.reduce((s, r) => s + getMass(r['Кол., кг']), 0);
+  const totalLines = valid.length;
+  const uniqueActsCount = Object.fromEntries(Object.entries(uniqueActsByType).map(([k, v]) => [k, v.size]));
+  const totalUniqueActs = Object.values(uniqueActsByType).reduce((s, set) => s + set.size, 0);
+
+  // Convert monthly Sets → counts
+  const monthlySorted = Object.entries(monthly).sort((a,b) => a[0].localeCompare(b[0])).map(([key, m]) => ({
+    key, label: m.label,
+    actsByType: Object.fromEntries(Object.entries(m.actsByType).map(([k,v]) => [k, v.size])),
+    massByType: m.massByType,
+    massTotal: m.massTotal,
+    massOTK: m.massOTK, massProd: m.massProd,
+    totalActs: Object.values(m.actsByType).reduce((s,set) => s + set.size, 0),
+  }));
+
+  return {
+    totalLines, totalUniqueActs, totalMass,
+    lineCountByType, massByType, uniqueActsCount,
+    massOTK, massProd,
+    massByUnit, massByCorpus,
+    massByDefect, massByCrit, massByProduct, massByNomen,
+    shiftByUnit,
+    causeCount, detCount, corrCount,
+    massByDate,
+    monthly: monthlySorted,
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// SMK-STYLE INSIGHTS (calm, professional tone)
+// ─────────────────────────────────────────────────────────────────────────
+const buildInsights = a => {
+  const ins = { attention: [], monitor: [], positive: [], action: [] };
+
+  // Top unit
+  const units = Object.entries(a.massByUnit).filter(([k]) => k !== 'Не определено').sort((x,y)=>y[1]-x[1]);
+  if (units.length) {
+    const [topName, topMass] = units[0];
+    const pct = (topMass / a.totalMass) * 100;
+    if (pct > 30) {
+      ins.attention.push(`По массе несоответствий лидирует <b>${topName}</b> — <b>${fmt(topMass)} кг</b> (${pct.toFixed(1)}% от общего объёма за период).`);
+    } else if (pct > 20) {
+      ins.monitor.push(`Наибольший вклад в массу несоответствий вносит <b>${topName}</b> — <b>${fmt(topMass)} кг</b> (${pct.toFixed(1)}%).`);
+    }
+
+    const undef = a.massByUnit['Не определено'] || 0;
+    const undefPct = (undef / a.totalMass) * 100;
+    if (undefPct > 10) {
+      ins.action.push(`По <b>${undefPct.toFixed(1)}%</b> массы (${fmt(undef)} кг) место возникновения не определено. Рекомендуется уточнить порядок заполнения поля «Склад (место возникновения)» в актах.`);
+    }
+  }
+
+  // UMI corpus concentration
+  const corpuses = Object.entries(a.massByCorpus).sort((x,y)=>y[1]-x[1]);
+  if (corpuses.length) {
+    const [cName, cMass] = corpuses[0];
+    const cTotal = corpuses.reduce((s,[,v])=>s+v, 0);
+    const cPct = (cMass / cTotal) * 100;
+    if (cPct > 40) {
+      ins.monitor.push(`Внутри УМИ преобладает <b>${cName}</b> — <b>${cPct.toFixed(0)}%</b> массы участка (${fmt(cMass)} кг).`);
+    }
+  }
+
+  // Criticality
+  const critTotal = Object.values(a.massByCrit).reduce((s,v)=>s+v, 0);
+  const neust = a.massByCrit['Неустранимое'] || 0;
+  const ust = a.massByCrit['Устранимое'] || 0;
+  const malo = a.massByCrit['Малозначительное'] || 0;
+  const neustPct = (neust / critTotal) * 100;
+  const ustPct = (ust / critTotal) * 100;
+  const maloPct = (malo / critTotal) * 100;
+
+  if (neustPct > 5) {
+    ins.attention.push(`Доля неустранимых несоответствий составляет <b>${neustPct.toFixed(1)}%</b> (${fmt(neust)} кг).`);
+    ins.action.push(`Провести анализ коренных причин неустранимых несоответствий по методу «5 почему» с разработкой КорД.`);
+  } else if (neust > 0) {
+    ins.positive.push(`Доля неустранимых несоответствий — <b>${neustPct.toFixed(1)}%</b> (${fmt(neust)} кг). Показатель в пределах нормы.`);
+  }
+  if (ustPct > 75) {
+    ins.positive.push(`Доля устранимых несоответствий — <b>${ustPct.toFixed(1)}%</b>. Большая часть продукции подлежит доработке без выбраковки.`);
+  }
+  if (maloPct > 30) {
+    ins.positive.push(`Малозначительные несоответствия составляют <b>${maloPct.toFixed(1)}%</b> массы — это благоприятный показатель структуры дефектности.`);
+  }
+
+  // OTK vs production
+  const totalControl = a.massOTK + a.massProd;
+  const prodPct = totalControl > 0 ? (a.massProd / totalControl) * 100 : 0;
+  if (prodPct < 10 && a.massProd > 0) {
+    ins.monitor.push(`Самоконтроль выявляет <b>${prodPct.toFixed(1)}%</b> массы НСП — основная фиксация происходит на этапе ОТК.`);
+    ins.action.push(`Усилить роль самоконтроля операторов: пересмотреть пооперационные точки контроля, провести инструктаж по СТО.`);
+  } else if (prodPct >= 25) {
+    ins.positive.push(`Эффективность самоконтроля — <b>${prodPct.toFixed(1)}%</b> массы выявляется на этапе производства.`);
+  }
+
+  // Top defects (Pareto)
+  const defects = Object.entries(a.massByDefect).sort((x,y)=>y[1]-x[1]);
+  const defTotal = defects.reduce((s,[,v])=>s+v, 0);
+  if (defects.length) {
+    const [topDef, topDefMass] = defects[0];
+    const topDefPct = (topDefMass / defTotal) * 100;
+    if (topDefPct > 25) {
+      ins.attention.push(`Несоответствие «<b>${esc(topDef)}</b>» составляет <b>${topDefPct.toFixed(1)}%</b> массы (${fmt(topDefMass)} кг).`);
+      ins.action.push(`Разработать корректирующие действия по несоответствию «${esc(topDef)}» в первоочередном порядке.`);
+    }
+    let cum = 0; let n80 = 0;
+    for (const [, v] of defects) {
+      cum += v;
+      n80++;
+      if (cum / defTotal >= 0.8) break;
+    }
+    if (n80 <= 5 && defects.length > 8) {
+      ins.positive.push(`Концентрация дефектности по Парето: <b>${n80}</b> ${n80 === 1 ? 'вид формирует' : (n80 < 5 ? 'вида формируют' : 'видов формируют')} 80% массы.`);
+    }
+  }
+
+  // Shifts per unit — anomaly detection
+  ['УМИ', 'УПН', 'ЦГЦ'].forEach(unit => {
+    const ud = a.shiftByUnit[unit];
+    if (!ud || ud.total === 0) return;
+    const realShifts = Object.entries(ud.byShift).filter(([k,v]) => /^[АБВ]$/.test(k) && v > 0);
+    if (realShifts.length < 2) return;
+    realShifts.sort((x,y)=>y[1]-x[1]);
+    const [topShift, topMass] = realShifts[0];
+    const otherSum = realShifts.slice(1).reduce((s,[,v])=>s+v, 0);
+    const avgOther = otherSum / (realShifts.length - 1);
+    if (avgOther > 0 && topMass / avgOther > 1.8) {
+      ins.monitor.push(`<b>${unit}, смена ${topShift}</b>: масса несоответствий ${fmt(topMass)} кг — выше средней по другим сменам в ${(topMass/avgOther).toFixed(1)} раза.`);
+      ins.action.push(`Провести разбор результатов работы смены ${topShift} участка ${unit} с мастером и ответственными по операциям.`);
+    }
+  });
+
+  // Top product
+  const prods = Object.entries(a.massByProduct).filter(([k]) => k !== 'Не указано').sort((x,y)=>y[1]-x[1]);
+  if (prods.length) {
+    const [pName, pMass] = prods[0];
+    const pPct = (pMass / a.totalMass) * 100;
+    if (pPct > 30) {
+      ins.monitor.push(`Продуктовое направление <b>${esc(pName)}</b> — <b>${pPct.toFixed(1)}%</b> массы НСП (${fmt(pMass)} кг).`);
+    }
+  }
+
+  // Cause/Corr fill rate
+  const rowsForCause = (a.lineCountByType['Акт техн. контроля'] || 0) + (a.lineCountByType['Самоконтроль'] || 0);
+  const causeTotal = Object.values(a.causeCount).reduce((s,v)=>s+v, 0);
+  const corrTotal = Object.values(a.corrCount).reduce((s,v)=>s+v, 0);
+  if (rowsForCause > 0) {
+    const causeFill = (causeTotal / rowsForCause) * 100;
+    const corrFill = (corrTotal / rowsForCause) * 100;
+    if (causeFill < 70) {
+      ins.action.push(`Заполняемость поля «Коренная причина возникновения» составляет <b>${causeFill.toFixed(0)}%</b> по актам И+С. Целевое значение — не менее 90%.`);
+    }
+    if (corrFill < 50) {
+      ins.action.push(`Заполняемость поля «Корректирующие действия» — <b>${corrFill.toFixed(0)}%</b>. Установить контроль за внесением КорД через 1С:ДО.`);
+    }
+  }
+
+  // Default if nothing
+  if (ins.attention.length === 0) {
+    ins.positive.push('Существенных отклонений по показателям качества за период не выявлено.');
+  }
+  if (ins.action.length === 0 && defects.length) {
+    const [topDef] = defects[0];
+    ins.action.push(`Включить мониторинг несоответствия «${esc(topDef)}» в перечень контролируемых показателей.`);
+  }
+
+  return ins;
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// Q&A ANSWERS
+// ─────────────────────────────────────────────────────────────────────────
+const ANSWERS = {
+  problemUnit: a => {
+    const units = Object.entries(a.massByUnit).filter(([k]) => k !== 'Не определено').sort((x,y)=>y[1]-x[1]);
+    if (!units.length) return 'Нет данных по участкам.';
+    const [topName, topMass] = units[0];
+    const topPct = (topMass / a.totalMass) * 100;
+
+    let html = `<span class="ans-h">📍 Распределение массы НСП по участкам</span>`;
+    html += `<table class="ans-table">`;
+    units.forEach(([n, v]) => {
+      const pct = (v / a.totalMass) * 100;
+      html += `<tr><td>${esc(n)}</td><td class="right"><b>${fmt(v)} кг</b></td><td class="right" style="color:var(--mid);">${pct.toFixed(1)}%</td></tr>`;
+    });
+    html += `</table>\n`;
+
+    html += `\n<b>${esc(topName)}</b> вносит наибольший вклад — <b>${fmt(topMass)} кг</b> (${topPct.toFixed(1)}% от общего объёма).`;
+
+    if (units.length > 1) {
+      const [secondName, secondMass] = units[1];
+      const ratio = secondMass > 0 ? (topMass / secondMass).toFixed(1) : '∞';
+      html += ` Превышение над вторым участком (${esc(secondName)}, ${fmt(secondMass)} кг) — в <b>${ratio}×</b>.\n`;
+    }
+
+    const corpuses = Object.entries(a.massByCorpus).sort((x,y)=>y[1]-x[1]);
+    if (corpuses.length && topName === 'УМИ') {
+      const cTotal = corpuses.reduce((s,[,v])=>s+v, 0);
+      html += `\n<span class="ans-h">🏗️ Распределение по корпусам УМИ</span>`;
+      html += `<table class="ans-table">`;
+      corpuses.forEach(([n, v]) => {
+        const pct = (v / cTotal) * 100;
+        html += `<tr><td>${esc(n)}</td><td class="right"><b>${fmt(v)} кг</b></td><td class="right" style="color:var(--mid);">${pct.toFixed(1)}%</td></tr>`;
+      });
+      html += `</table>`;
+      const [worstCorp, worstMass] = corpuses[0];
+      html += `\n<div class="ans-block ans-block-action"><b>Рекомендации СМК:</b>\n• Провести внутренний аудит технологических процессов на участке ${esc(topName)}, особенно на ${esc(worstCorp)}.\n• Включить участок в план аудитов на следующий период.\n• Проверить соответствие квалификации операторов требованиям СТО.</div>`;
+    } else {
+      html += `\n<div class="ans-block ans-block-action"><b>Рекомендации СМК:</b>\n• Провести внутренний аудит на участке ${esc(topName)} в плановом порядке.\n• Проанализировать технологические карты по основным видам продукции участка.\n• Усилить пооперационный контроль на ключевых операциях.</div>`;
+    }
+    return html;
+  },
+
+  topDefects: a => {
+    const defects = Object.entries(a.massByDefect).sort((x,y)=>y[1]-x[1]);
+    const total = defects.reduce((s,[,v])=>s+v, 0);
+    if (!defects.length) return 'Нет данных по дефектам.';
+
+    let html = `<span class="ans-h">📊 Топ-5 несоответствий по массе</span>`;
+    html += `<table class="ans-table">`;
+    defects.slice(0, 5).forEach(([n, v], i) => {
+      const pct = (v / total) * 100;
+      html += `<tr><td>${i+1}. ${esc(n)}</td><td class="right"><b>${fmt(v)} кг</b></td><td class="right" style="color:var(--mid);">${pct.toFixed(1)}%</td></tr>`;
+    });
+    const top5Sum = defects.slice(0, 5).reduce((s,[,v])=>s+v, 0);
+    html += `</table>`;
+    html += `\nПервые 5 видов составляют <b>${((top5Sum/total)*100).toFixed(1)}%</b> массы НСП.\n`;
+
+    let cum = 0; let n80 = 0;
+    for (const [, v] of defects) { cum += v; n80++; if (cum / total >= 0.8) break; }
+    html += `\n<span class="ans-h">📐 Анализ по Парето</span>`;
+    html += `80% массы НСП формируется <b>${n80}</b> ${n80 === 1 ? 'видом несоответствий' : (n80 < 5 ? 'видами' : 'видами')}. Концентрация корректирующих действий на этих позициях даст наибольший эффект.\n`;
+
+    const [topDef, topDefMass] = defects[0];
+    const topDefPct = (topDefMass / total) * 100;
+    html += `\n<div class="ans-block ans-block-action"><b>Рекомендации СМК:</b>\n• Разработать КорД по несоответствию «${esc(topDef)}» (${topDefPct.toFixed(1)}% массы) в первоочередном порядке.\n• Провести анализ коренных причин по методу «5 почему» или диаграмме Исикавы.\n• Внести изменения в технологический процесс при выявлении системных причин.\n• Включить регулярный мониторинг показателя в отчётность ИК.</div>`;
+    return html;
+  },
+
+  shifts: a => {
+    let html = `<span class="ans-h">👷 Распределение НСП по сменам — для каждого участка</span>`;
+    let any = false;
+
+    ['УМИ', 'УПН', 'ЦГЦ', 'Логистика'].forEach(unit => {
+      const ud = a.shiftByUnit[unit];
+      if (!ud || ud.total === 0) return;
+      const shifts = Object.entries(ud.byShift).sort((x,y)=>y[1]-x[1]);
+      const realShifts = shifts.filter(([k,v]) => /^[АБВ]$/.test(k) && v > 0);
+      if (!realShifts.length) return;
+      any = true;
+
+      html += `\n<b>${esc(unit)}</b> — всего ${fmt(ud.total)} кг\n`;
+      html += `<table class="ans-table">`;
+      shifts.forEach(([sh, v]) => {
+        const label = /^[АБВ]$/.test(sh) ? `Смена ${sh}` : sh;
+        html += `<tr><td>${esc(label)}</td><td class="right"><b>${fmt(v)} кг</b></td><td class="right" style="color:var(--mid);">${((v/ud.total)*100).toFixed(0)}%</td></tr>`;
+      });
+      html += `</table>`;
+
+      if (realShifts.length >= 2) {
+        const [topSh, topMass] = realShifts[0];
+        const otherSum = realShifts.slice(1).reduce((s,[,v])=>s+v, 0);
+        const avgOther = otherSum / (realShifts.length - 1);
+        if (avgOther > 0 && topMass / avgOther > 1.8) {
+          html += `<div class="ans-block ans-block-action" style="margin-top:6px;"><b>Отклонение:</b> смена <b>${topSh}</b> превышает среднее по другим сменам в ${(topMass/avgOther).toFixed(1)} раза.</div>`;
+        }
+      }
+    });
+
+    if (!any) return 'Нет данных по сменам.';
+
+    html += `\n<div class="ans-block ans-block-action"><b>Рекомендации СМК:</b>\n• По сменам с превышением средней более чем в 1,8 раза — провести разбор с мастером смены.\n• Проанализировать состав операторов и их квалификацию по выявленным операциям.\n• Проверить графики ППР оборудования смены, наличие отклонений от регламента.\n• При повторяющемся характере отклонений — внести в план обучения персонала.</div>`;
+    return html;
+  },
+
+  causes: a => {
+    const causes = Object.entries(a.causeCount).sort((x,y)=>y[1]-x[1]);
+    const det = Object.entries(a.detCount).sort((x,y)=>y[1]-x[1]);
+    const corr = Object.entries(a.corrCount).sort((x,y)=>y[1]-x[1]);
+
+    let html = `<span class="ans-h">🔍 Коренные причины возникновения (только акты И + С)</span>`;
+    if (!causes.length) {
+      html += `Не указано ни в одном акте.\n`;
+    } else {
+      html += `<table class="ans-table">`;
+      causes.slice(0, 5).forEach(([n, c], i) => {
+        html += `<tr><td>${i+1}. ${esc(n)}</td><td class="right"><b>${c}</b></td></tr>`;
+      });
+      html += `</table>`;
+    }
+
+    html += `\n<span class="ans-h">🔎 Коренные причины необнаружения</span>`;
+    if (!det.length) html += `Не указано.\n`;
+    else {
+      html += `<table class="ans-table">`;
+      det.slice(0, 5).forEach(([n, c], i) => {
+        html += `<tr><td>${i+1}. ${esc(n)}</td><td class="right"><b>${c}</b></td></tr>`;
+      });
+      html += `</table>`;
+    }
+
+    html += `\n<span class="ans-h">🛠️ Топ корректирующих действий</span>`;
+    if (!corr.length) html += `Не указано.\n`;
+    else {
+      html += `<table class="ans-table">`;
+      corr.slice(0, 5).forEach(([n, c], i) => {
+        const short = n.length > 100 ? n.slice(0, 100) + '…' : n;
+        html += `<tr><td>${i+1}. ${esc(short)}</td><td class="right"><b>${c}</b></td></tr>`;
+      });
+      html += `</table>`;
+    }
+
+    const rowsForCause = (a.lineCountByType['Акт техн. контроля'] || 0) + (a.lineCountByType['Самоконтроль'] || 0);
+    const causeTotal = Object.values(a.causeCount).reduce((s,v)=>s+v, 0);
+    const corrTotal = Object.values(a.corrCount).reduce((s,v)=>s+v, 0);
+    if (rowsForCause > 0) {
+      const cFill = (causeTotal / rowsForCause * 100).toFixed(0);
+      const corrFill = (corrTotal / rowsForCause * 100).toFixed(0);
+      html += `\n<b>Заполняемость полей в актах И+С:</b> коренные причины — <b>${cFill}%</b>, КорД — <b>${corrFill}%</b>.\n`;
+    }
+
+    let recs = [];
+    if (causes.length && causes[0][1] >= 3) {
+      recs.push(`Наиболее частая коренная причина — «${esc(causes[0][0])}» (${causes[0][1]} случаев). Проработать системные мероприятия по её устранению.`);
+    }
+    if (rowsForCause > 0 && (causeTotal / rowsForCause) < 0.7) {
+      recs.push(`Усилить контроль заполнения поля «Коренная причина» (текущая заполняемость — ${(causeTotal / rowsForCause * 100).toFixed(0)}%, целевая — не менее 90%).`);
+    }
+    if (rowsForCause > 0 && (corrTotal / rowsForCause) < 0.5) {
+      recs.push(`Установить порядок обязательного внесения КорД при оформлении актов через 1С:ДО.`);
+    }
+    recs.push(`Провести обучение персонала ОТК и операторов по методике формирования КорД (СТО Р-051).`);
+
+    if (recs.length) {
+      html += `\n<div class="ans-block ans-block-action"><b>Рекомендации СМК:</b>\n` + recs.map(r => '• ' + r).join('\n') + `</div>`;
+    }
+    return html;
+  },
+
+  control: a => {
+    const total = a.massOTK + a.massProd;
+    const otkPct = total > 0 ? (a.massOTK / total) * 100 : 0;
+    const prodPct = total > 0 ? (a.massProd / total) * 100 : 0;
+
+    let html = `<span class="ans-h">⚖️ Этапы выявления НСП</span>`;
+    html += `<table class="ans-table">`;
+    html += `<tr><td>ОТК (акты И + карты К)</td><td class="right"><b>${fmt(a.massOTK)} кг</b></td><td class="right" style="color:var(--mid);">${otkPct.toFixed(1)}%</td></tr>`;
+    html += `<tr><td>Производство (самоконтроль С)</td><td class="right"><b>${fmt(a.massProd)} кг</b></td><td class="right" style="color:var(--mid);">${prodPct.toFixed(1)}%</td></tr>`;
+    html += `</table>\n`;
+
+    if (prodPct < 10) {
+      html += `<span class="ans-tag tag-orange">Внимание</span>Эффективность самоконтроля — <b>${prodPct.toFixed(1)}%</b>. Несоответствия фиксируются преимущественно ОТК на поздних стадиях.\n`;
+    } else if (prodPct < 25) {
+      html += `<span class="ans-tag tag-yellow">Средне</span>Самоконтроль выявляет <b>${prodPct.toFixed(1)}%</b> массы. Целевой ориентир для предприятия — 25-40%.\n`;
+    } else {
+      html += `<span class="ans-tag tag-green">В норме</span>Самоконтроль работает эффективно — <b>${prodPct.toFixed(1)}%</b> массы выявляется операторами на месте.\n`;
+    }
+
+    const critTotal = Object.values(a.massByCrit).reduce((s,v)=>s+v, 0);
+    html += `\n<span class="ans-h">🎯 Структура несоответствий по критичности</span>`;
+    html += `<table class="ans-table">`;
+    const order = ['Малозначительное', 'Устранимое', 'Неустранимое', 'В работе', 'Отработка технологии'];
+    order.forEach(name => {
+      const v = a.massByCrit[name] || 0;
+      if (v === 0) return;
+      const pct = (v / critTotal) * 100;
+      let tag = '';
+      if (name === 'Неустранимое' && pct > 5) tag = '<span class="ans-tag tag-orange">внимание</span>';
+      else if (name === 'Малозначительное') tag = '<span class="ans-tag tag-green">+</span>';
+      else if (name === 'Устранимое' && pct > 70) tag = '<span class="ans-tag tag-green">+</span>';
+      html += `<tr><td>${tag}${esc(name)}</td><td class="right"><b>${fmt(v)} кг</b></td><td class="right" style="color:var(--mid);">${pct.toFixed(1)}%</td></tr>`;
+    });
+    html += `</table>\n`;
+
+    const neust = a.massByCrit['Неустранимое'] || 0;
+    const ust = a.massByCrit['Устранимое'] || 0;
+    const neustPct = (neust / critTotal) * 100;
+    const ustPct = (ust / critTotal) * 100;
+
+    let recs = [];
+    if (prodPct < 15) {
+      recs.push('Пересмотреть систему пооперационного самоконтроля: ввести обязательные точки контроля на критических операциях.');
+      recs.push('Провести обучение операторов по СТО Р-094 «Самоконтроль производственного персонала».');
+    }
+    if (neustPct > 5) {
+      recs.push(`Для несоответствий с критичностью «Неустранимое» (${neustPct.toFixed(1)}%) — обязательное оформление протокола несоответствующей продукции и регистрация затрат в 1С:ERP.`);
+    }
+    if (ustPct > 75) {
+      recs.push(`Оптимизировать процесс доработки устранимых дефектов: сократить срок прохождения КорД через 1С:ДО.`);
+    }
+    recs.push('Включить показатели по структуре критичности в ежемесячную отчётность ИК.');
+
+    html += `\n<div class="ans-block ans-block-action"><b>Рекомендации СМК:</b>\n` + recs.map(r => '• ' + r).join('\n') + `</div>`;
+    return html;
+  },
+
+  recommendations: a => {
+    const insights = buildInsights(a);
+    let html = `<span class="ans-h">📋 Сводный план мероприятий по результатам анализа</span>`;
+
+    const all = [
+      ...insights.attention.map(t => ({ p: 1, t, tag: 'Внимание' })),
+      ...insights.monitor.map(t => ({ p: 2, t, tag: 'Мониторинг' })),
+      ...insights.action.map(t => ({ p: 3, t, tag: 'Действие' })),
+    ];
+
+    if (!all.length) return 'Существенных отклонений не выявлено.';
+
+    all.forEach((r, i) => {
+      const bg = r.p === 1 ? '#fef9e7' : (r.p === 2 ? '#eff6ff' : 'rgba(124,58,237,.08)');
+      const bdr = r.p === 1 ? '#d4a017' : (r.p === 2 ? 'var(--sky)' : 'var(--purple)');
+      html += `\n<div class="ans-block" style="background:${bg};border-left:3px solid ${bdr};">
+        <b>${i+1}. ${r.tag}</b><br/>${r.t}
+      </div>`;
+    });
+
+    if (insights.positive.length) {
+      html += `\n<span class="ans-h" style="margin-top:18px;">✓ Положительные показатели</span>`;
+      insights.positive.forEach(p => {
+        html += `<div class="ans-block" style="background:#f0fdf4;border-left:3px solid var(--green);">${p}</div>\n`;
+      });
+    }
+    return html;
+  },
+
+  dynamics: a => {
+    const dyn = Object.entries(a.massByDate).sort((x,y) => x[0].localeCompare(y[0]));
+    if (dyn.length === 0) return 'Нет данных с датами.';
+    if (dyn.length === 1) return `Все записи за одну дату: ${dyn[0][0]} — ${fmt(dyn[0][1])} кг.`;
+
+    const total = dyn.reduce((s,[,v])=>s+v, 0);
+    const avg = total / dyn.length;
+    const max = dyn.reduce((m,[d,v]) => v > m[1] ? [d, v] : m, ['', 0]);
+    const min = dyn.reduce((m,[d,v]) => v < m[1] || m[1] === 0 ? [d, v] : m, ['', 0]);
+
+    const half = Math.floor(dyn.length / 2);
+    const firstHalf = dyn.slice(0, half).reduce((s,[,v])=>s+v, 0) / half;
+    const secondHalf = dyn.slice(-half).reduce((s,[,v])=>s+v, 0) / half;
+    const trendPct = firstHalf > 0 ? ((secondHalf - firstHalf) / firstHalf) * 100 : 0;
+
+    let html = `<span class="ans-h">📈 Динамика по дням</span>`;
+    html += `Дней с фиксацией НСП: <b>${dyn.length}</b>\n`;
+    html += `Средняя масса за день: <b>${fmt(avg)} кг</b>\n`;
+    html += `Максимум: <b>${fmt(max[1])} кг</b> (${max[0]})\n`;
+    html += `Минимум: <b>${fmt(min[1])} кг</b> (${min[0]})\n\n`;
+
+    if (Math.abs(trendPct) > 15) {
+      const dir = trendPct > 0 ? 'рост' : 'снижение';
+      const tag = trendPct > 0 ? 'tag-yellow' : 'tag-green';
+      html += `<span class="ans-tag ${tag}">${dir}</span>Тренд во второй половине периода: <b>${trendPct > 0 ? '+' : ''}${trendPct.toFixed(0)}%</b> к первой половине.\n`;
+    } else {
+      html += `<span class="ans-tag tag-blue">Стабильно</span>Динамика стабильна, отклонения в пределах ±15%.\n`;
+    }
+
+    let recs = [];
+    if (max[1] > avg * 2) {
+      recs.push(`Провести разбор пикового дня <b>${max[0]}</b> (${fmt(max[1])} кг — превышение средней в ${(max[1]/avg).toFixed(1)}×). Проверить состояние оборудования, технологические параметры, состав смены.`);
+    }
+    if (trendPct > 20) {
+      recs.push(`Динамика роста +${trendPct.toFixed(0)}% — рассмотреть на ИК причины ухудшения показателей и принять упреждающие меры.`);
+    }
+    recs.push('Включить ежедневный мониторинг массы НСП в перечень отчётных показателей.');
+
+    if (recs.length) {
+      html += `\n<div class="ans-block ans-block-action"><b>Рекомендации СМК:</b>\n` + recs.map(r => '• ' + r).join('\n') + `</div>`;
+    }
+    return html;
+  },
+
+  products: a => {
+    const prods = Object.entries(a.massByProduct).filter(([k]) => k !== 'Не указано').sort((x,y)=>y[1]-x[1]);
+    const nomens = Object.entries(a.massByNomen).filter(([k]) => k !== 'Не указано').sort((x,y)=>y[1]-x[1]);
+
+    let html = `<span class="ans-h">📦 Топ-5 продуктовых направлений по массе НСП</span>`;
+    if (!prods.length) return 'Нет данных по продуктам.';
+    html += `<table class="ans-table">`;
+    prods.slice(0, 5).forEach(([n, v], i) => {
+      const pct = (v / a.totalMass) * 100;
+      html += `<tr><td>${i+1}. ${esc(n)}</td><td class="right"><b>${fmt(v)} кг</b></td><td class="right" style="color:var(--mid);">${pct.toFixed(1)}%</td></tr>`;
+    });
+    html += `</table>\n`;
+
+    if (nomens.length) {
+      html += `\n<span class="ans-h">🔧 Топ-5 номенклатурных позиций с НСП</span>`;
+      html += `<table class="ans-table">`;
+      nomens.slice(0, 5).forEach(([n, v], i) => {
+        const short = n.length > 70 ? n.slice(0, 70) + '…' : n;
+        html += `<tr><td>${i+1}. ${esc(short)}</td><td class="right"><b>${fmt(v)} кг</b></td></tr>`;
+      });
+      html += `</table>`;
+    }
+
+    const [topProd, topProdMass] = prods[0];
+    const topProdPct = (topProdMass / a.totalMass) * 100;
+    let recs = [];
+    if (topProdPct > 30) {
+      recs.push(`Направление «${esc(topProd)}» (${topProdPct.toFixed(1)}% массы НСП) — провести анализ технологической карты и проверить актуальность КД.`);
+    }
+    recs.push('По топ-3 направлениям усилить пооперационный контроль и периодичность инспекционных проверок.');
+    if (nomens.length && nomens[0][1] > a.totalMass * 0.1) {
+      recs.push(`Для номенклатурной позиции «${esc(nomens[0][0].slice(0,60))}…» провести анализ повторяющихся видов несоответствий.`);
+    }
+    recs.push('Включить топ продуктов в перечень для углублённого анализа на следующий период.');
+
+    html += `\n<div class="ans-block ans-block-action"><b>Рекомендации СМК:</b>\n` + recs.map(r => '• ' + r).join('\n') + `</div>`;
+    return html;
+  },
+
+  monthly: a => {
+    if (!a.monthly || a.monthly.length === 0) return 'В файле нет данных с датами для помесячного анализа.';
+    if (a.monthly.length < 2) return `В файле представлен только один месяц: <b>${a.monthly[0].label}</b>. Помесячное сравнение недоступно.`;
+
+    let html = `<span class="ans-h">📅 Распределение по месяцам — количество актов и масса</span>`;
+    html += `<table class="ans-table"><thead><tr style="background:var(--bg);"><th>Месяц</th><th class="right">Акты И</th><th class="right">Карты К</th><th class="right">Сам. С</th><th class="right">Всего</th><th class="right">Масса (кг)</th></tr></thead><tbody>`;
+    a.monthly.forEach(m => {
+      html += `<tr><td><b>${esc(m.label)}</b></td>`;
+      html += `<td class="right">${m.actsByType['Акт техн. контроля']||0}</td>`;
+      html += `<td class="right">${m.actsByType['Карта инспекц. контроля']||0}</td>`;
+      html += `<td class="right">${m.actsByType['Самоконтроль']||0}</td>`;
+      html += `<td class="right"><b>${m.totalActs}</b></td>`;
+      html += `<td class="right"><b>${fmt(m.massTotal)}</b></td></tr>`;
+    });
+    html += `</tbody></table>\n`;
+
+    // Trend analysis
+    if (a.monthly.length >= 2) {
+      const first = a.monthly[0];
+      const last = a.monthly[a.monthly.length - 1];
+      const trend = first.massTotal > 0 ? ((last.massTotal - first.massTotal) / first.massTotal) * 100 : 0;
+      const dir = trend > 0 ? 'рост' : 'снижение';
+      const tag = Math.abs(trend) < 15 ? 'tag-blue' : (trend > 0 ? 'tag-yellow' : 'tag-green');
+      html += `\nДинамика массы НСП: <b>${first.label}</b> → <b>${last.label}</b>: <span class="ans-tag ${tag}">${dir}</span><b>${trend > 0 ? '+' : ''}${trend.toFixed(1)}%</b> (${fmt(first.massTotal)} → ${fmt(last.massTotal)} кг).\n`;
+    }
+
+    let recs = [
+      'Сопоставить помесячную динамику с производственным планом — выделить периоды с превышением нормативов.',
+      'По месяцам с ростом массы НСП — провести разбор причин на ИК с привлечением начальников участков.',
+      'При устойчивом тренде роста — пересмотреть план КорД и периодичность аудитов.',
+    ];
+    html += `\n<div class="ans-block ans-block-action"><b>Рекомендации СМК:</b>\n` + recs.map(r => '• ' + r).join('\n') + `</div>`;
+    return html;
+  },
+};
+
+const QUESTIONS = [
+  { id: 'problemUnit',     icon: '🏭', label: 'Распределение по участкам' },
+  { id: 'topDefects',      icon: '📊', label: 'Главные виды дефектов' },
+  { id: 'shifts',          icon: '👷', label: 'Анализ по сменам' },
+  { id: 'causes',          icon: '🔍', label: 'Коренные причины и КорД' },
+  { id: 'control',         icon: '⚖️', label: 'Эффективность контроля' },
+  { id: 'products',        icon: '📦', label: 'Продуктовые направления' },
+  { id: 'dynamics',        icon: '📈', label: 'Динамика по дням' },
+  { id: 'monthly',         icon: '📅', label: 'Помесячное сравнение' },
+  { id: 'recommendations', icon: '📋', label: 'Сводный план мероприятий' },
+];
+
+// ─────────────────────────────────────────────────────────────────────────
+// CHARTS
+// ─────────────────────────────────────────────────────────────────────────
+Chart.register(ChartDataLabels);
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+Chart.defaults.color = C.dark;
+
+const allCharts = [];
+const makeChart = (canvasId, config) => {
+  const el = document.getElementById(canvasId);
+  if (!el) return null;
+  const ctx = el.getContext('2d');
+  const chart = new Chart(ctx, config);
+  allCharts.push(chart);
+  return chart;
+};
+
+const tooltipCfg = (unit = 'кг') => ({
+  backgroundColor: 'rgba(255,255,255,0.98)',
+  titleColor: C.navy, bodyColor: C.dark, borderColor: C.light, borderWidth: 1,
+  titleFont: { weight: 'bold', size: 13 }, bodyFont: { size: 13 },
+  padding: 10, cornerRadius: 8, displayColors: true,
+  callbacks: {
+    label: ctx => `${ctx.dataset.label || ctx.label}: ${fmt(ctx.parsed.y ?? ctx.parsed.x ?? ctx.parsed)} ${unit}`
+  }
+});
+
+// Universal label configs — labels appear ALWAYS
+const labelTop = (suffix = '') => ({
+  color: C.dark, anchor: 'end', align: 'end', offset: 4, clamp: true,
+  font: { size: 10, weight: 'bold' },
+  formatter: v => v == null || v === 0 ? '' : fmt(v) + suffix,
+});
+
+const labelRight = (suffix = ' кг') => ({
+  color: C.dark, anchor: 'end', align: 'right', offset: 4, clamp: true,
+  font: { size: 10, weight: 'bold' },
+  formatter: v => v == null || v === 0 ? '' : fmt(v) + suffix,
+});
+
+const labelStacked = (suffix = '') => ({
+  color: '#fff', anchor: 'center', align: 'center',
+  font: { size: 9.5, weight: 'bold' },
+  formatter: v => v < 50 ? '' : fmt(v),
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+let analytics = null;
+let currentFileName = '';
+
+const renderDashboard = a => {
+  allCharts.forEach(c => c.destroy());
+  allCharts.length = 0;
+
+  const dash = document.getElementById('dashboard');
+  document.getElementById('btnPDF').style.display = '';
+
+  const TYPE_ORDER = ['Акт техн. контроля', 'Карта инспекц. контроля', 'Самоконтроль'];
+  const typeData = TYPE_ORDER.filter(t => a.uniqueActsCount[t] || a.lineCountByType[t]).map(name => ({
+    name, count: a.uniqueActsCount[name] || 0, mass: Math.round(a.massByType[name] || 0),
+  }));
+
+  const stageData = [
+    { name: 'ОТК (И + К)', value: Math.round(a.massOTK), color: C.sky },
+    { name: 'Производство (С)', value: Math.round(a.massProd), color: C.orange },
+  ];
+
+  const unitData = Object.entries(a.massByUnit).sort((x,y)=>y[1]-x[1])
+    .map(([name, value]) => ({ name, value: Math.round(value) }));
+
+  const corpusData = Object.entries(a.massByCorpus).sort((x,y)=>y[1]-x[1])
+    .map(([name, value], i) => ({ name, value: Math.round(value), color: PAL[i] }));
+  const corpusTotal = corpusData.reduce((s,d)=>s+d.value, 0);
+
+  const defData = Object.entries(a.massByDefect).sort((x,y)=>y[1]-x[1]).slice(0, 15)
+    .map(([name, value]) => ({ full: name, name: name.length > 40 ? name.slice(0, 40) + '…' : name, value: Math.round(value) }));
+
+  const allDefSorted = Object.entries(a.massByDefect).sort((x,y)=>y[1]-x[1]);
+  const defTotal = allDefSorted.reduce((s,[,v])=>s+v, 0);
+  let cum = 0;
+  const paretoData = allDefSorted.slice(0, 12).map(([name, value]) => {
+    cum += value;
+    return { full: name, name: name.length > 25 ? name.slice(0, 25) + '…' : name, value: Math.round(value), cumPct: Math.round(cum / defTotal * 100) };
+  });
+
+  const critOrder = ['Малозначительное', 'Устранимое', 'Неустранимое', 'В работе', 'Отработка технологии'];
+  const critColors = { 'Малозначительное': C.cyan, 'Устранимое': C.sky, 'Неустранимое': C.red, 'В работе': C.yellow, 'Отработка технологии': C.orange };
+  const critData = Object.entries(a.massByCrit)
+    .sort((x,y) => {
+      const ix = critOrder.indexOf(x[0]); const iy = critOrder.indexOf(y[0]);
+      return (ix === -1 ? 99 : ix) - (iy === -1 ? 99 : iy);
+    })
+    .map(([name, value], i) => ({ name, value: Math.round(value), color: critColors[name] || PAL[i] }));
+  const critTotal = critData.reduce((s,d)=>s+d.value, 0);
+
+  const prodData = Object.entries(a.massByProduct).sort((x,y)=>y[1]-x[1]).slice(0, 12)
+    .map(([name, value]) => ({ name, value: Math.round(value) }));
+
+  const nomenData = Object.entries(a.massByNomen).sort((x,y)=>y[1]-x[1]).slice(0, 10)
+    .map(([name, value]) => ({ full: name, name: name.length > 60 ? name.slice(0, 60) + '…' : name, value: Math.round(value) }));
+
+  const dynamicsData = Object.entries(a.massByDate).sort((x,y)=>x[0].localeCompare(y[0]))
+    .map(([date, value]) => ({ date: date.slice(8, 10) + '.' + date.slice(5, 7), value: Math.round(value) }));
+
+  const causeData = Object.entries(a.causeCount).sort((x,y)=>y[1]-x[1]).slice(0, 10)
+    .map(([name, count]) => ({ full: name, name: name.length > 50 ? name.slice(0, 50) + '…' : name, count }));
+  const detData = Object.entries(a.detCount).sort((x,y)=>y[1]-x[1]).slice(0, 10)
+    .map(([name, count]) => ({ full: name, name: name.length > 50 ? name.slice(0, 50) + '…' : name, count }));
+  const corrData = Object.entries(a.corrCount).sort((x,y)=>y[1]-x[1]).slice(0, 10)
+    .map(([name, count]) => ({ full: name, name: name.length > 60 ? name.slice(0, 60) + '…' : name, count }));
+
+  const totalCauses = Object.values(a.causeCount).reduce((s,v)=>s+v, 0);
+  const totalDet = Object.values(a.detCount).reduce((s,v)=>s+v, 0);
+  const totalCorr = Object.values(a.corrCount).reduce((s,v)=>s+v, 0);
+
+  const insights = buildInsights(a);
+  const isMultiMonth = a.monthly && a.monthly.length > 1;
+
+  // ── Build HTML — wrap each major section in .pdf-section for clean PDF page breaks
+  let html = `
+    <div class="pdf-section">
+      <div class="kpi-grid">
+        <div class="kpi" style="border-left-color:${C.sky}; background:linear-gradient(145deg,${C.sky}15,${C.sky}06);"><div class="kpi-label">Кол-во актов</div><div class="kpi-value" style="color:${C.sky};">${fmt(a.totalUniqueActs)}</div><div class="kpi-unit">по уникальным №</div></div>
+        <div class="kpi" style="border-left-color:${C.orange}; background:linear-gradient(145deg,${C.orange}15,${C.orange}06);"><div class="kpi-label">Масса НСП</div><div class="kpi-value" style="color:${C.orange};">${fmtT(a.totalMass)}</div><div class="kpi-unit">${fmt(a.totalMass)} кг</div></div>
+        <div class="kpi" style="border-left-color:${C.blue}; background:linear-gradient(145deg,${C.blue}15,${C.blue}06);"><div class="kpi-label">Фиксация ОТК</div><div class="kpi-value" style="color:${C.blue};">${fmtT(a.massOTK)}</div><div class="kpi-unit">${fmt(a.massOTK)} кг</div></div>
+        <div class="kpi" style="border-left-color:${C.cyan}; background:linear-gradient(145deg,${C.cyan}15,${C.cyan}06);"><div class="kpi-label">Производство</div><div class="kpi-value" style="color:${C.cyan};">${fmtT(a.massProd)}</div><div class="kpi-unit">${fmt(a.massProd)} кг</div></div>
+        <div class="kpi" style="border-left-color:${C.mid}; background:linear-gradient(145deg,${C.mid}15,${C.mid}06);"><div class="kpi-label">Участков</div><div class="kpi-value" style="color:${C.mid};">${Object.keys(a.massByUnit).length}</div><div class="kpi-unit">мест возникн.</div></div>
+        <div class="kpi" style="border-left-color:${C.purple}; background:linear-gradient(145deg,${C.purple}15,${C.purple}06);"><div class="kpi-label">Видов дефектов</div><div class="kpi-value" style="color:${C.purple};">${Object.keys(a.massByDefect).length}</div><div class="kpi-unit">уникальных</div></div>
+        ${isMultiMonth ? `<div class="kpi" style="border-left-color:${C.teal}; background:linear-gradient(145deg,${C.teal}15,${C.teal}06);"><div class="kpi-label">Месяцев в файле</div><div class="kpi-value" style="color:${C.teal};">${a.monthly.length}</div><div class="kpi-unit">${a.monthly[0].label.split(' ')[0]}–${a.monthly[a.monthly.length-1].label.split(' ')[0]}</div></div>` : ''}
+      </div>
+    </div>
+
+    <div class="pdf-section">
+      ${sectionHead('🔍', 'Автоматический анализ показателей качества', C.purple, 'Программа проанализировала данные и подготовила выводы по методике СМК')}
+      <div class="insights-grid">
+        ${insightBlockHTML('Требует внимания', insights.attention, 'insight-attention')}
+        ${insightBlockHTML('Под мониторингом', insights.monitor, 'insight-monitor')}
+        ${insightBlockHTML('Положительные показатели', insights.positive, 'insight-positive')}
+        ${insightBlockHTML('Рекомендуемые действия', insights.action, 'insight-action')}
+      </div>
+    </div>
+
+    <div class="pdf-section">
+      ${sectionHead('💬', 'Быстрые вопросы по данным', C.sky, 'Нажмите вопрос — программа покажет анализ с цифрами и рекомендациями СМК')}
+      <div class="card card-wide card-accent-top" style="border-top-color:${C.sky};">
+        <div class="qa-buttons">
+          ${QUESTIONS.map(q => `<button class="qa-btn" data-q="${q.id}"><span class="qa-icon">${q.icon}</span>${esc(q.label)}</button>`).join('')}
+        </div>
+        <div class="answer-area placeholder" id="answerArea">Выберите вопрос выше — программа покажет детальный ответ с цифрами по вашим данным.</div>
+      </div>
+    </div>
+
+    ${isMultiMonth ? `
+    <div class="pdf-section">
+      ${sectionHead('📅', 'Помесячное сравнение — количество актов и масса НСП', C.teal, `Период в файле: ${a.monthly.length} ${a.monthly.length === 1 ? 'месяц' : (a.monthly.length < 5 ? 'месяца' : 'месяцев')} (${a.monthly[0].label} — ${a.monthly[a.monthly.length-1].label})`)}
+      <div class="grid-2">
+        ${cardHTML('Количество актов по месяцам и видам', `<div class="chart-box" style="height:320px;"><canvas id="ch_monthlyActs"></canvas></div>`, C.teal)}
+        ${cardHTML('Масса несоответствий по месяцам и видам (кг)', `<div class="chart-box" style="height:320px;"><canvas id="ch_monthlyMass"></canvas></div>`, C.orange)}
+      </div>
+      <div style="margin-top:20px;">
+        ${cardHTML('Сводная таблица по месяцам', monthlyTableHTML(a.monthly), C.sky, true)}
+      </div>
+    </div>
+    ` : ''}
+
+    <div class="pdf-section">
+      ${sectionHead(1, 'Акты технического контроля — по видам (количество и масса)', C.sky)}
+      <div class="grid-2">
+        ${cardHTML('Количество актов по видам (уник. №)', `<div class="chart-box" style="height:280px;"><canvas id="ch_typeCount"></canvas></div>`, C.sky)}
+        ${cardHTML('Масса несоответствий по типу акта (кг)', `<div class="chart-box" style="height:280px;"><canvas id="ch_typeMass"></canvas></div>`, C.orange)}
+      </div>
+    </div>
+
+    <div class="pdf-section">
+      ${sectionHead(2, 'Объём несоответствий по этапам производства (тонны)', C.orange)}
+      <div class="grid-2">
+        ${cardHTML('ОТК (И+К) vs Производство (С) — по массе', `<div class="chart-box" style="height:280px;"><canvas id="ch_stageBar"></canvas></div>`, C.orange)}
+        ${cardHTML('Соотношение этапов', `<div class="chart-box" style="height:280px;"><canvas id="ch_stagePie"></canvas></div>`, C.cyan)}
+      </div>
+    </div>
+
+    <div class="pdf-section">
+      ${sectionHead(3, 'Объём несоответствий по местам возникновения (тонны)', C.teal)}
+      ${cardHTML('По участкам и подразделениям (кг)', `<div class="chart-box" style="height:${Math.max(280, unitData.length * 52)}px;"><canvas id="ch_unit"></canvas></div>`, C.teal, true)}
+    </div>
+
+    ${corpusData.length > 0 ? `
+      <div class="pdf-section">
+        ${sectionHead(4, 'Объём несоответствий по УМИ — разбивка по корпусам (%)', C.purple)}
+        <div class="grid-2">
+          ${cardHTML('По корпусам УМИ (кг)', `<div class="chart-box" style="height:300px;"><canvas id="ch_corpusBar"></canvas></div>`, C.purple)}
+          ${cardHTML('Доля корпусов УМИ (%)', `<div class="chart-box" style="height:300px;"><canvas id="ch_corpusPie"></canvas></div>`, C.sky)}
+        </div>
+      </div>
+    ` : ''}
+
+    <div class="pdf-section">
+      ${sectionHead(5, 'Дефекты и критичность несоответствий', C.red)}
+      ${cardHTML('Топ-15 видов дефектов по массе (кг)', `<div class="chart-box" style="height:${Math.max(380, defData.length * 32)}px;"><canvas id="ch_defects"></canvas></div>`, C.red, true)}
+    </div>
+
+    <div class="pdf-section">
+      <div class="grid-2">
+        ${cardHTML('Критичность несоответствий (кг)', `<div class="chart-box" style="height:320px;"><canvas id="ch_critPie"></canvas></div>`, C.orange)}
+        ${cardHTML('Критичность — сводная таблица', critTableHTML(critData, critTotal), C.cyan)}
+      </div>
+    </div>
+
+    <div class="pdf-section">
+      ${sectionHead(6, 'Продуктовые направления (тонны)', C.teal)}
+      ${cardHTML('Объём несоответствий по продуктовым направлениям (Группа номенклатуры, кг)', `<div class="chart-box" style="height:360px;"><canvas id="ch_products"></canvas></div>`, C.teal, true)}
+    </div>
+
+    <div class="pdf-section">
+      ${sectionHead(7, 'Разбивка по сменам — для каждого участка отдельно', C.orange, 'Смена А / Б / В / Не установлено + разрез по продуктовым направлениям')}
+    </div>
+    ${['УМИ', 'УПН', 'ЦГЦ', 'Логистика'].map(unit => {
+      const ud = a.shiftByUnit[unit];
+      if (!ud || ud.total === 0) return '';
+      return `<div class="pdf-section">${unitShiftPanelHTML(unit, ud, UNIT_COLORS[unit] || C.sky)}</div>`;
+    }).join('')}
+
+    ${(causeData.length || detData.length || corrData.length) ? `
+      <div class="pdf-section">
+        ${sectionHead(8, 'Анализ коренных причин и корректирующих действий (штук)', C.purple, `Учитываются только акты И (техн.) и С (самоконтроль). Карты К исключены. Всего учтено: причин возн. ${totalCauses} · необнар. ${totalDet} · КорД ${totalCorr}`)}
+        <div class="grid-2">
+          ${causeData.length ? cardHTML(`Коренные причины возникновения (${totalCauses} шт)`,
+            `<div class="chart-box" style="height:${Math.max(280, causeData.length * 38)}px;"><canvas id="ch_causes"></canvas></div>`, C.sky) : ''}
+          ${detData.length ? cardHTML(`Коренные причины необнаружения (${totalDet} шт)`,
+            `<div class="chart-box" style="height:${Math.max(280, detData.length * 38)}px;"><canvas id="ch_det"></canvas></div>`, C.orange) : ''}
+        </div>
+      </div>
+      ${corrData.length ? `<div class="pdf-section">${cardHTML(`Корректирующие действия (КорД) — топ-10 (${totalCorr} шт)`,
+          `<div class="chart-box" style="height:${Math.max(280, corrData.length * 38)}px;"><canvas id="ch_corr"></canvas></div>`, C.purple, true)}</div>` : ''}
+    ` : ''}
+
+    <div class="pdf-section">
+      ${sectionHead(9, 'Pareto-анализ дефектов — правило 80/20', C.red, 'Какие дефекты дают 80% массы несоответствий. Линия показывает накопительный %.')}
+      ${cardHTML('Pareto: масса + накопительный %', `<div class="chart-box" style="height:400px;"><canvas id="ch_pareto"></canvas></div>`, C.red, true)}
+    </div>
+
+    ${dynamicsData.length > 1 ? `
+      <div class="pdf-section">
+        ${sectionHead(10, 'Динамика несоответствий по дням (кг)', C.teal, 'Как меняется масса несоответствий день ото дня')}
+        ${cardHTML('Динамика по датам', `<div class="chart-box" style="height:340px;"><canvas id="ch_dynamics"></canvas></div>`, C.teal, true)}
+      </div>
+    ` : ''}
+
+    ${nomenData.length ? `
+      <div class="pdf-section">
+        ${sectionHead(11, 'Топ-10 номенклатурных позиций по массе НСП', C.purple, 'Конкретные изделия с наибольшей массой несоответствий')}
+        ${cardHTML('Топ-10 номенклатур', `<div class="chart-box" style="height:${Math.max(320, nomenData.length * 44)}px;"><canvas id="ch_nomen"></canvas></div>`, C.purple, true)}
+      </div>
+    ` : ''}
+  `;
+
+  dash.innerHTML = html;
+
+  renderAllCharts({
+    typeData, stageData, unitData, corpusData, corpusTotal,
+    defData, paretoData, critData, critTotal, prodData,
+    nomenData, dynamicsData, causeData, detData, corrData,
+    monthly: a.monthly,
+  });
+
+  ['УМИ', 'УПН', 'ЦГЦ', 'Логистика'].forEach(unit => {
+    const ud = a.shiftByUnit[unit];
+    if (!ud || ud.total === 0) return;
+    renderUnitShiftCharts(unit, ud);
+  });
+
+  bindQA();
+};
+
+const insightBlockHTML = (title, items, cls) => {
+  if (!items.length) return '';
+  return `<div class="insight-block ${cls}"><h3>${esc(title)}</h3><ul>${items.map(i => `<li>${i}</li>`).join('')}</ul></div>`;
+};
+
+const sectionHead = (n, title, color, sub) => `
+  <div class="section-head">
+    <div class="section-head-row">
+      <div class="section-num" style="background:linear-gradient(135deg,${color},${color}aa);">${n}</div>
+      <h2>${esc(title)}</h2>
+    </div>
+    ${sub ? `<p class="section-sub">${esc(sub)}</p>` : ''}
+  </div>
+`;
+
+const cardHTML = (title, body, accent, wide) => `
+  <div class="card ${wide ? 'card-wide' : ''} ${accent ? 'card-accent-top' : ''}" ${accent ? `style="border-top-color:${accent};"` : ''}>
+    ${title ? `<h3 class="card-title">${esc(title)}</h3>` : ''}
+    ${body}
+  </div>
+`;
+
+const critTableHTML = (critData, total) => {
+  const rows = [...critData].sort((x,y)=>y.value-x.value).map(d => `
+    <tr><td><span class="color-dot" style="background:${d.color};"></span>${esc(d.name)}</td><td class="right" style="font-weight:700;">${fmt(d.value)}</td><td class="right" style="color:${C.mid};">${fmtPct(d.value, total)}</td></tr>
+  `).join('');
+  return `<table><thead><tr><th>Критичность</th><th class="right">Масса, кг</th><th class="right">Доля</th></tr></thead><tbody>${rows}<tr class="total-row"><td>ИТОГО</td><td class="right">${fmt(total)}</td><td class="right">100%</td></tr></tbody></table>`;
+};
+
+const monthlyTableHTML = (monthly) => {
+  const rows = monthly.map(m => `
+    <tr>
+      <td><b>${esc(m.label)}</b></td>
+      <td class="right">${m.actsByType['Акт техн. контроля']||0}</td>
+      <td class="right">${m.actsByType['Карта инспекц. контроля']||0}</td>
+      <td class="right">${m.actsByType['Самоконтроль']||0}</td>
+      <td class="right"><b>${m.totalActs}</b></td>
+      <td class="right">${fmt(m.massOTK)}</td>
+      <td class="right">${fmt(m.massProd)}</td>
+      <td class="right" style="font-weight:700;">${fmt(m.massTotal)}</td>
+    </tr>
+  `).join('');
+  const totalActs = monthly.reduce((s,m)=>s+m.totalActs, 0);
+  const totalA = monthly.reduce((s,m)=>s+(m.actsByType['Акт техн. контроля']||0), 0);
+  const totalK = monthly.reduce((s,m)=>s+(m.actsByType['Карта инспекц. контроля']||0), 0);
+  const totalS = monthly.reduce((s,m)=>s+(m.actsByType['Самоконтроль']||0), 0);
+  const totalOTK = monthly.reduce((s,m)=>s+m.massOTK, 0);
+  const totalProd = monthly.reduce((s,m)=>s+m.massProd, 0);
+  const totalMass = monthly.reduce((s,m)=>s+m.massTotal, 0);
+  return `<table>
+    <thead><tr>
+      <th>Месяц</th>
+      <th class="right">Акты И</th>
+      <th class="right">Карты К</th>
+      <th class="right">Сам. С</th>
+      <th class="right">Всего актов</th>
+      <th class="right">Масса ОТК (кг)</th>
+      <th class="right">Масса Произв. (кг)</th>
+      <th class="right">Всего масса (кг)</th>
+    </tr></thead>
+    <tbody>${rows}
+      <tr class="total-row">
+        <td>ИТОГО</td>
+        <td class="right">${totalA}</td>
+        <td class="right">${totalK}</td>
+        <td class="right">${totalS}</td>
+        <td class="right">${totalActs}</td>
+        <td class="right">${fmt(totalOTK)}</td>
+        <td class="right">${fmt(totalProd)}</td>
+        <td class="right">${fmt(totalMass)}</td>
+      </tr>
+    </tbody>
+  </table>`;
+};
+
+const SHIFT_ORDER = ['А', 'Б', 'В', 'Не установлено', 'Не указано', 'Прочее'];
+const SHIFT_COLORS = { 'А': C.sky, 'Б': C.orange, 'В': C.cyan, 'Не установлено': C.mid, 'Не указано': C.light, 'Прочее': C.purple };
+
+const unitShiftPanelHTML = (unit, data, color) => {
+  const id = unit.replace(/[^а-яА-Яa-z0-9]/gi, '');
+  const top5Prods = (() => {
+    const tot = {};
+    Object.values(data.byShiftProduct || {}).forEach(pm => {
+      Object.entries(pm).forEach(([p,v]) => { tot[p] = (tot[p]||0) + v; });
+    });
+    return Object.entries(tot).sort((a,b)=>b[1]-a[1]).slice(0, 5).map(([k])=>k);
+  })();
+  const top5Defs = (() => {
+    const tot = {};
+    Object.values(data.byShiftDefect || {}).forEach(dm => {
+      Object.entries(dm).forEach(([d,v]) => { tot[d] = (tot[d]||0) + v; });
+    });
+    return Object.entries(tot).sort((a,b)=>b[1]-a[1]).slice(0, 5).map(([k])=>k);
+  })();
+  return `
+    <div class="unit-shift-panel">
+      <div class="unit-shift-head" style="background:linear-gradient(135deg,${color}18,${color}05); border-left:5px solid ${color};">
+        <div><div class="unit-name">${esc(unit)}</div><div class="unit-sub">Разбивка по сменам</div></div>
+        <div style="text-align:right;"><div class="unit-total" style="color:${color};">${fmt(data.total)} кг</div><div class="unit-total-sub">${fmtT(data.total)}</div></div>
+      </div>
+      <div class="grid-2">
+        ${cardHTML(`${unit} — по сменам (кг)`, `<div class="chart-box" style="height:260px;"><canvas id="ch_shift_${id}"></canvas></div>`, color)}
+        ${top5Prods.length > 0 ? cardHTML(`${unit} — смена × продукт (топ-5, кг)`, `<div class="chart-box" style="height:260px;"><canvas id="ch_shiftProd_${id}"></canvas></div>`, color) : ''}
+      </div>
+      ${top5Defs.length > 0 ? `<div style="margin-top:16px;">${cardHTML(`${unit} — смена × вид дефекта (топ-5, кг)`, `<div class="chart-box" style="height:320px;"><canvas id="ch_shiftDef_${id}"></canvas></div>`, color, true)}</div>` : ''}
+    </div>
+  `;
+};
+
+const renderUnitShiftCharts = (unit, data) => {
+  const id = unit.replace(/[^а-яА-Яa-z0-9]/gi, '');
+  const shifts = Object.entries(data.byShift || {}).filter(([k,v]) => v > 0)
+    .sort((a,b) => (SHIFT_ORDER.indexOf(a[0]) === -1 ? 99 : SHIFT_ORDER.indexOf(a[0])) - (SHIFT_ORDER.indexOf(b[0]) === -1 ? 99 : SHIFT_ORDER.indexOf(b[0])));
+
+  makeChart(`ch_shift_${id}`, {
+    type: 'bar',
+    data: {
+      labels: shifts.map(([k]) => k.length === 1 ? `Смена ${k}` : k),
+      datasets: [{
+        label: 'Масса (кг)',
+        data: shifts.map(([,v]) => Math.round(v)),
+        backgroundColor: shifts.map(([k]) => SHIFT_COLORS[k] || C.sky),
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: tooltipCfg('кг'), datalabels: labelTop() },
+      scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => fmt(v) } } },
+      layout: { padding: { top: 28 } },
+    }
+  });
+
+  const tot = {};
+  Object.values(data.byShiftProduct || {}).forEach(pm => {
+    Object.entries(pm).forEach(([p,v]) => { tot[p] = (tot[p]||0) + v; });
+  });
+  const top5 = Object.entries(tot).sort((a,b)=>b[1]-a[1]).slice(0, 5).map(([k])=>k);
+  if (top5.length > 0) {
+    makeChart(`ch_shiftProd_${id}`, {
+      type: 'bar',
+      data: {
+        labels: shifts.map(([k]) => k.length === 1 ? `Смена ${k}` : k),
+        datasets: top5.map((p, i) => ({
+          label: p,
+          data: shifts.map(([sh]) => Math.round((data.byShiftProduct[sh] || {})[p] || 0)),
+          backgroundColor: PAL[i % PAL.length],
+          borderRadius: 4,
+        }))
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } }, tooltip: tooltipCfg('кг'), datalabels: labelStacked() },
+        scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, ticks: { callback: v => fmt(v) } } }
+      }
+    });
+  }
+
+  // ── Shift × Defect (top-5 defects of this unit)
+  const totDef = {};
+  Object.values(data.byShiftDefect || {}).forEach(dm => {
+    Object.entries(dm).forEach(([d,v]) => { totDef[d] = (totDef[d]||0) + v; });
+  });
+  const top5Def = Object.entries(totDef).sort((a,b)=>b[1]-a[1]).slice(0, 5);
+  const top5DefNames = top5Def.map(([k])=>k);
+  if (top5DefNames.length > 0) {
+    makeChart(`ch_shiftDef_${id}`, {
+      type: 'bar',
+      data: {
+        labels: shifts.map(([k]) => k.length === 1 ? `Смена ${k}` : k),
+        datasets: top5DefNames.map((d, i) => ({
+          label: d.length > 35 ? d.slice(0, 35) + '…' : d,
+          data: shifts.map(([sh]) => Math.round((data.byShiftDefect[sh] || {})[d] || 0)),
+          backgroundColor: PAL[i % PAL.length],
+          borderRadius: 4,
+        }))
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } },
+          tooltip: {
+            ...tooltipCfg('кг'),
+            callbacks: {
+              title: items => items[0].label,
+              label: ctx => {
+                const fullName = top5DefNames[ctx.datasetIndex];
+                return `${fullName}: ${fmt(ctx.parsed.y)} кг`;
+              }
+            }
+          },
+          datalabels: labelStacked(),
+        },
+        scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, ticks: { callback: v => fmt(v) } } }
+      }
+    });
+  }
+};
+
+const renderAllCharts = (D) => {
+  // ── Monthly charts (if any)
+  if (D.monthly && D.monthly.length > 1) {
+    const months = D.monthly.map(m => m.label.split(' ')[0]); // short month name
+    makeChart('ch_monthlyActs', {
+      type: 'bar',
+      data: {
+        labels: months,
+        datasets: [
+          { label: 'Акт И', data: D.monthly.map(m => m.actsByType['Акт техн. контроля'] || 0), backgroundColor: C.sky, borderRadius: 5 },
+          { label: 'Карта К', data: D.monthly.map(m => m.actsByType['Карта инспекц. контроля'] || 0), backgroundColor: C.orange, borderRadius: 5 },
+          { label: 'Самоконтр. С', data: D.monthly.map(m => m.actsByType['Самоконтроль'] || 0), backgroundColor: C.cyan, borderRadius: 5 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } }, tooltip: tooltipCfg('шт'), datalabels: labelTop() },
+        scales: { x: { grid: { display: false } }, y: { ticks: { precision: 0 } } },
+        layout: { padding: { top: 28 } }
+      }
+    });
+    makeChart('ch_monthlyMass', {
+      type: 'bar',
+      data: {
+        labels: months,
+        datasets: [
+          { label: 'Акт И', data: D.monthly.map(m => Math.round(m.massByType['Акт техн. контроля'] || 0)), backgroundColor: C.sky, borderRadius: 5 },
+          { label: 'Карта К', data: D.monthly.map(m => Math.round(m.massByType['Карта инспекц. контроля'] || 0)), backgroundColor: C.orange, borderRadius: 5 },
+          { label: 'Самоконтр. С', data: D.monthly.map(m => Math.round(m.massByType['Самоконтроль'] || 0)), backgroundColor: C.cyan, borderRadius: 5 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } }, tooltip: tooltipCfg('кг'), datalabels: labelTop() },
+        scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => fmt(v) } } },
+        layout: { padding: { top: 28 } }
+      }
+    });
+  }
+
+  makeChart('ch_typeCount', {
+    type: 'bar',
+    data: { labels: D.typeData.map(d => d.name), datasets: [{ label: 'Кол-во актов', data: D.typeData.map(d => d.count), backgroundColor: C.sky, borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tooltipCfg('шт'), datalabels: { ...labelTop(), formatter: v => v } }, scales: { x: { grid: { display: false } }, y: { ticks: { precision: 0 } } }, layout: { padding: { top: 28 } } }
+  });
+
+  makeChart('ch_typeMass', {
+    type: 'bar',
+    data: { labels: D.typeData.map(d => d.name), datasets: [{ label: 'Масса (кг)', data: D.typeData.map(d => d.mass), backgroundColor: C.orange, borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tooltipCfg('кг'), datalabels: labelTop() }, scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => fmt(v) } } }, layout: { padding: { top: 28 } } }
+  });
+
+  makeChart('ch_stageBar', {
+    type: 'bar',
+    data: { labels: D.stageData.map(d => d.name), datasets: [{ label: 'Масса (кг)', data: D.stageData.map(d => d.value), backgroundColor: D.stageData.map(d => d.color), borderRadius: 8 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tooltipCfg('кг'), datalabels: labelTop() }, scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => fmt(v) } } }, layout: { padding: { top: 28 } } }
+  });
+
+  makeChart('ch_stagePie', {
+    type: 'doughnut',
+    data: { labels: D.stageData.map(d => d.name), datasets: [{ data: D.stageData.map(d => d.value), backgroundColor: D.stageData.map(d => d.color), borderWidth: 2, borderColor: '#fff' }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 12 } } },
+        tooltip: { ...tooltipCfg('кг'), callbacks: { label: ctx => `${ctx.label}: ${fmt(ctx.parsed)} кг` } },
+        datalabels: { color: '#fff', font: { weight: 'bold', size: 13 }, formatter: (v, ctx) => {
+          const sum = ctx.dataset.data.reduce((a,b)=>a+b, 0);
+          return sum > 0 ? `${fmt(v)} кг\n(${Math.round(v / sum * 100)}%)` : '';
+        }}
+      }
+    }
+  });
+
+  makeChart('ch_unit', {
+    type: 'bar',
+    data: { labels: D.unitData.map(d => d.name), datasets: [{ label: 'Масса (кг)', data: D.unitData.map(d => d.value), backgroundColor: D.unitData.map((d,i) => UNIT_COLORS[d.name] || PAL[i % PAL.length]), borderRadius: 6 }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tooltipCfg('кг'), datalabels: labelRight() }, scales: { x: { ticks: { callback: v => fmt(v) } }, y: { grid: { display: false } } }, layout: { padding: { right: 100 } } }
+  });
+
+  if (D.corpusData.length > 0) {
+    makeChart('ch_corpusBar', {
+      type: 'bar',
+      data: { labels: D.corpusData.map(d => d.name), datasets: [{ label: 'Масса (кг)', data: D.corpusData.map(d => d.value), backgroundColor: D.corpusData.map(d => d.color), borderRadius: 6 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tooltipCfg('кг'), datalabels: labelTop() }, scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => fmt(v) } } }, layout: { padding: { top: 28 } } }
+    });
+    makeChart('ch_corpusPie', {
+      type: 'pie',
+      data: { labels: D.corpusData.map(d => d.name), datasets: [{ data: D.corpusData.map(d => d.value), backgroundColor: D.corpusData.map(d => d.color), borderWidth: 2, borderColor: '#fff' }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { font: { size: 12 } } },
+          tooltip: { ...tooltipCfg('кг'), callbacks: { label: ctx => `${ctx.label}: ${fmt(ctx.parsed)} кг (${fmtPct(ctx.parsed, D.corpusTotal)})` } },
+          datalabels: { color: '#fff', font: { weight: 'bold', size: 11 }, formatter: (v, ctx) => {
+            const sum = ctx.dataset.data.reduce((a,b)=>a+b, 0);
+            const pct = sum > 0 ? v / sum : 0;
+            return pct < 0.04 ? '' : `${fmt(v)}\n${Math.round(pct * 100)}%`;
+          }}
+        }
+      }
+    });
+  }
+
+  makeChart('ch_defects', {
+    type: 'bar',
+    data: { labels: D.defData.map(d => d.name), datasets: [{ label: 'Масса (кг)', data: D.defData.map(d => d.value), backgroundColor: C.sky, borderRadius: 5 }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { ...tooltipCfg('кг'), callbacks: { title: items => D.defData[items[0].dataIndex].full, label: ctx => `${fmt(ctx.parsed.x)} кг` } },
+        datalabels: labelRight(),
+      },
+      scales: { x: { ticks: { callback: v => fmt(v) } }, y: { grid: { display: false }, ticks: { font: { size: 11 } } } },
+      layout: { padding: { right: 110 } }
+    }
+  });
+
+  makeChart('ch_critPie', {
+    type: 'doughnut',
+    data: { labels: D.critData.map(d => d.name), datasets: [{ data: D.critData.map(d => d.value), backgroundColor: D.critData.map(d => d.color), borderWidth: 2, borderColor: '#fff' }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+        tooltip: { ...tooltipCfg('кг'), callbacks: { label: ctx => `${ctx.label}: ${fmt(ctx.parsed)} кг (${fmtPct(ctx.parsed, D.critTotal)})` } },
+        datalabels: { color: '#fff', font: { weight: 'bold', size: 11 }, formatter: (v, ctx) => {
+          const sum = ctx.dataset.data.reduce((a,b)=>a+b, 0);
+          const pct = sum > 0 ? v / sum : 0;
+          return pct < 0.04 ? '' : `${fmt(v)}\n${Math.round(pct * 100)}%`;
+        }}
+      }
+    }
+  });
+
+  makeChart('ch_products', {
+    type: 'bar',
+    data: { labels: D.prodData.map(d => d.name), datasets: [{ label: 'Масса (кг)', data: D.prodData.map(d => d.value), backgroundColor: D.prodData.map((_,i) => PAL[i % PAL.length]), borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tooltipCfg('кг'), datalabels: labelTop() }, scales: { x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: 45, minRotation: 25 } }, y: { ticks: { callback: v => fmt(v) } } }, layout: { padding: { top: 28 } } }
+  });
+
+  if (D.causeData.length) {
+    makeChart('ch_causes', {
+      type: 'bar',
+      data: { labels: D.causeData.map(d => d.name), datasets: [{ label: 'Количество', data: D.causeData.map(d => d.count), backgroundColor: C.sky, borderRadius: 5 }] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { ...tooltipCfg('шт'), callbacks: { title: items => D.causeData[items[0].dataIndex].full, label: ctx => `${ctx.parsed.x} раз` } }, datalabels: labelRight(' шт') },
+        scales: { x: { ticks: { precision: 0 } }, y: { grid: { display: false }, ticks: { font: { size: 10.5 } } } },
+        layout: { padding: { right: 70 } }
+      }
+    });
+  }
+  if (D.detData.length) {
+    makeChart('ch_det', {
+      type: 'bar',
+      data: { labels: D.detData.map(d => d.name), datasets: [{ label: 'Количество', data: D.detData.map(d => d.count), backgroundColor: C.orange, borderRadius: 5 }] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { ...tooltipCfg('шт'), callbacks: { title: items => D.detData[items[0].dataIndex].full, label: ctx => `${ctx.parsed.x} раз` } }, datalabels: labelRight(' шт') },
+        scales: { x: { ticks: { precision: 0 } }, y: { grid: { display: false }, ticks: { font: { size: 10.5 } } } },
+        layout: { padding: { right: 70 } }
+      }
+    });
+  }
+  if (D.corrData.length) {
+    makeChart('ch_corr', {
+      type: 'bar',
+      data: { labels: D.corrData.map(d => d.name), datasets: [{ label: 'Количество', data: D.corrData.map(d => d.count), backgroundColor: C.purple, borderRadius: 5 }] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { ...tooltipCfg('шт'), callbacks: { title: items => D.corrData[items[0].dataIndex].full, label: ctx => `${ctx.parsed.x} раз` } }, datalabels: labelRight(' шт') },
+        scales: { x: { ticks: { precision: 0 } }, y: { grid: { display: false }, ticks: { font: { size: 10.5 } } } },
+        layout: { padding: { right: 70 } }
+      }
+    });
+  }
+
+  makeChart('ch_pareto', {
+    type: 'bar',
+    data: {
+      labels: D.paretoData.map(d => d.name),
+      datasets: [
+        { type: 'bar', label: 'Масса (кг)', data: D.paretoData.map(d => d.value), backgroundColor: C.sky, borderRadius: 5, yAxisID: 'y', datalabels: { ...labelTop(), color: C.dark } },
+        { type: 'line', label: 'Накопит. %', data: D.paretoData.map(d => d.cumPct), borderColor: C.red, backgroundColor: C.red, borderWidth: 3, yAxisID: 'y1', tension: 0.2, pointRadius: 5, pointBackgroundColor: C.red, datalabels: { color: C.red, anchor: 'end', align: 'top', offset: 6, font: { size: 10, weight: 'bold' }, formatter: v => v + '%' } }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 12 } } },
+        tooltip: { backgroundColor: 'rgba(255,255,255,0.98)', titleColor: C.navy, bodyColor: C.dark, borderColor: C.light, borderWidth: 1, padding: 10, cornerRadius: 8,
+          callbacks: { title: items => D.paretoData[items[0].dataIndex].full, label: ctx => ctx.dataset.label === 'Накопит. %' ? `${ctx.parsed.y}%` : `${fmt(ctx.parsed.y)} кг` }
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10.5 }, maxRotation: 45, minRotation: 35 } },
+        y: { position: 'left', ticks: { callback: v => fmt(v) } },
+        y1: { position: 'right', min: 0, max: 110, grid: { drawOnChartArea: false }, ticks: { callback: v => v + '%' } }
+      },
+      layout: { padding: { top: 28 } }
+    }
+  });
+
+  if (D.dynamicsData.length > 1) {
+    makeChart('ch_dynamics', {
+      type: 'line',
+      data: { labels: D.dynamicsData.map(d => d.date), datasets: [{ label: 'Масса (кг)', data: D.dynamicsData.map(d => d.value), borderColor: C.sky, backgroundColor: 'rgba(46,122,191,0.2)', fill: true, tension: 0.3, borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: C.sky }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'top' }, tooltip: tooltipCfg('кг'), datalabels: { color: C.navy, anchor: 'end', align: 'top', offset: 6, font: { size: 9.5, weight: 'bold' }, formatter: v => fmt(v) } },
+        scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => fmt(v) } } },
+        layout: { padding: { top: 28 } }
+      }
+    });
+  }
+
+  if (D.nomenData.length) {
+    makeChart('ch_nomen', {
+      type: 'bar',
+      data: { labels: D.nomenData.map(d => d.name), datasets: [{ label: 'Масса (кг)', data: D.nomenData.map(d => d.value), backgroundColor: C.purple, borderRadius: 5 }] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { ...tooltipCfg('кг'), callbacks: { title: items => D.nomenData[items[0].dataIndex].full, label: ctx => `${fmt(ctx.parsed.x)} кг` } }, datalabels: labelRight() },
+        scales: { x: { ticks: { callback: v => fmt(v) } }, y: { grid: { display: false }, ticks: { font: { size: 10.5 } } } },
+        layout: { padding: { right: 110 } }
+      }
+    });
+  }
+};
+
+const bindQA = () => {
+  document.querySelectorAll('.qa-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.qa-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const id = btn.dataset.q;
+      const fn = ANSWERS[id];
+      const area = document.getElementById('answerArea');
+      if (!fn || !analytics) {
+        area.innerHTML = 'Нет данных.';
+        area.classList.remove('placeholder');
+        return;
+      }
+      area.classList.remove('placeholder');
+      area.innerHTML = fn(analytics);
+      area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+  });
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// PDF EXPORT — section-by-section, no cropping
+// ─────────────────────────────────────────────────────────────────────────
+const exportPDF = async () => {
+  if (!analytics) return;
+  const btn = document.getElementById('btnPDF');
+  const msg = document.getElementById('pdfMsg');
+  const msgText = document.getElementById('pdfMsgText');
+  btn.disabled = true;
+  msg.style.display = '';
+  msgText.textContent = 'Готовим PDF…';
+
+  try {
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    await new Promise(r => setTimeout(r, 300));
+
+    const sections = Array.from(document.querySelectorAll('.pdf-section'));
+    if (!sections.length) throw new Error('Нет данных для экспорта');
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfW = 210;
+    const pdfH = 297;
+    const margin = 8;
+    const contentW = pdfW - margin * 2;
+    const contentH = pdfH - margin * 2;
+
+    let yPos = margin; // current Y on current page
+    let isFirstPage = true;
+
+    for (let i = 0; i < sections.length; i++) {
+      const sec = sections[i];
+      msgText.textContent = `Рендерим секцию ${i+1} из ${sections.length}…`;
+      await new Promise(r => setTimeout(r, 50));
+
+      const canvas = await html2canvas(sec, {
+        scale: 1.6,
+        backgroundColor: '#f0f4f9',
+        logging: false,
+        useCORS: true,
+        windowWidth: 1340,
+      });
+
+      const imgW = contentW;
+      const imgH = (canvas.height * imgW) / canvas.width;
+      const imgData = canvas.toDataURL('image/jpeg', 0.85);
+
+      if (imgH > contentH) {
+        // Section is bigger than one page — split it
+        if (!isFirstPage && yPos > margin) {
+          pdf.addPage();
+          yPos = margin;
+        }
+        let sourceY = 0;
+        const pageRatio = contentH / imgH; // fraction of source per page
+        const sourcePxPerPage = canvas.height * pageRatio;
+        let remaining = canvas.height;
+
+        while (remaining > 0) {
+          const sliceH = Math.min(sourcePxPerPage, remaining);
+          // Create a temp canvas with just this slice
+          const tmp = document.createElement('canvas');
+          tmp.width = canvas.width;
+          tmp.height = sliceH;
+          const tctx = tmp.getContext('2d');
+          tctx.drawImage(canvas, 0, sourceY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+          const sliceImg = tmp.toDataURL('image/jpeg', 0.85);
+          const sliceImgH = (sliceH * imgW) / canvas.width;
+
+          if (!isFirstPage) pdf.addPage();
+          pdf.addImage(sliceImg, 'JPEG', margin, margin, imgW, sliceImgH, undefined, 'FAST');
+          isFirstPage = false;
+          yPos = margin + sliceImgH + 4;
+          sourceY += sliceH;
+          remaining -= sliceH;
+        }
+      } else {
+        // Section fits on one page — check if it fits in remaining space on current page
+        if (!isFirstPage && yPos + imgH > pdfH - margin) {
+          pdf.addPage();
+          yPos = margin;
+        }
+        pdf.addImage(imgData, 'JPEG', margin, yPos, imgW, imgH, undefined, 'FAST');
+        yPos += imgH + 4;
+        isFirstPage = false;
+      }
+    }
+
+    msgText.textContent = 'Сохраняем…';
+    const baseName = (currentFileName || 'Отчёт_качества').replace(/\.xlsx?$/i, '');
+    pdf.save(`${baseName}_аналитика.pdf`);
+  } catch (e) {
+    console.error(e);
+    showError('Ошибка экспорта PDF: ' + e.message);
+  }
+  msg.style.display = 'none';
+  btn.disabled = false;
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+const showError = (text) => {
+  const z = document.getElementById('errorZone');
+  z.textContent = '⚠️ ' + text;
+  z.style.display = '';
+  setTimeout(() => { z.style.display = 'none'; }, 8000);
+};
+
+const processFile = async (file) => {
+  if (!file) return;
+  document.getElementById('busyZone').style.display = '';
+  document.getElementById('dropZone').style.display = 'none';
+  document.getElementById('errorZone').style.display = 'none';
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true });
+    const a = buildAnalytics(wb);
+    if (!a) {
+      showError('Не удалось распознать структуру файла.');
+      document.getElementById('busyZone').style.display = 'none';
+      document.getElementById('dropZone').style.display = '';
+      return;
+    }
+    analytics = a;
+    currentFileName = file.name;
+    document.getElementById('fname').textContent = '📎 ' + file.name;
+    document.getElementById('busyZone').style.display = 'none';
+    renderDashboard(a);
+  } catch (e) {
+    showError('Ошибка: ' + e.message);
+    document.getElementById('busyZone').style.display = 'none';
+    document.getElementById('dropZone').style.display = '';
+  }
+};
+
+document.getElementById('fileInput').addEventListener('change', e => processFile(e.target.files[0]));
+const dz = document.getElementById('dropZone');
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.match(/\.xlsx?$/i)) processFile(f);
+  else showError('Нужен файл .xlsx или .xls');
+});
+dz.addEventListener('dragover', e => e.preventDefault());
+dz.addEventListener('click', () => document.getElementById('fileInput').click());
+
+document.getElementById('btnPDF').addEventListener('click', exportPDF);
+
+// ─────────────────────────────────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────────────────────────────────
+const switchTab = (name) => {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + name));
+  if (name === 'archive') loadArchive();
+};
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => switchTab(t.dataset.tab));
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// ARCHIVE — load list from manifest.json and files from /data/ folder
+// ─────────────────────────────────────────────────────────────────────────
+// Config: where files live. Try relative path first (works on GitHub Pages).
+const ARCHIVE_MANIFEST_URL = './data/manifest.json';
+const ARCHIVE_FILES_BASE = './data/';
+
+let archiveFiles = [];      // [{name, file, period, date, size}]
+let archiveLoaded = false;
+let selectedFiles = new Set(); // filenames
+
+const loadArchive = async () => {
+  if (archiveLoaded) {
+    renderArchive();
+    return;
+  }
+  const listEl = document.getElementById('archiveList');
+  listEl.innerHTML = `<div class="archive-loading"><div style="font-size:36px;margin-bottom:10px;">⏳</div><p style="color:var(--mid);">Загружаем список файлов…</p></div>`;
+
+  try {
+    const resp = await fetch(ARCHIVE_MANIFEST_URL, { cache: 'no-cache' });
+    if (!resp.ok) throw new Error('Файл manifest.json не найден');
+    const data = await resp.json();
+    archiveFiles = Array.isArray(data) ? data : (data.files || []);
+    // Sort: newest first by date or by natural filename order
+    archiveFiles.sort((a, b) => {
+      if (a.date && b.date) return b.date.localeCompare(a.date);
+      return (b.name || '').localeCompare(a.name || '');
+    });
+    archiveLoaded = true;
+    document.getElementById('archBadge').textContent = archiveFiles.length;
+    renderArchive();
+  } catch (e) {
+    listEl.innerHTML = `
+      <div class="archive-empty">
+        <div class="archive-empty-icon">📁</div>
+        <p><b>Архив пока не настроен</b></p>
+        <p style="margin-top:10px;">Для работы архива нужен файл <code style="background:var(--bg);padding:2px 6px;border-radius:4px;">data/manifest.json</code> со списком файлов.</p>
+        <p style="margin-top:14px; font-size:12px;">Пока используйте кнопку «📂 Загрузить XLSX» — данные из браузера.</p>
+      </div>
+    `;
+  }
+};
+
+const renderArchive = () => {
+  const listEl = document.getElementById('archiveList');
+  if (!archiveFiles.length) {
+    listEl.innerHTML = `<div class="archive-empty"><div class="archive-empty-icon">📭</div><p>В архиве пока нет файлов</p></div>`;
+    return;
+  }
+  listEl.innerHTML = '<div class="archive-list">' + archiveFiles.map(f => `
+    <div class="archive-item ${selectedFiles.has(f.file) ? 'selected' : ''}" data-file="${esc(f.file)}">
+      <div class="archive-check">✓</div>
+      <div class="archive-info">
+        <div class="archive-name">${esc(f.name || f.file)}</div>
+        <div class="archive-meta">
+          ${f.period ? `<span>📅 ${esc(f.period)}</span>` : ''}
+          ${f.date ? `<span>🕓 Добавлен: ${esc(f.date)}</span>` : ''}
+          <span>📄 ${esc(f.file)}</span>
+        </div>
+      </div>
+      <div class="archive-actions">
+        <button class="archive-btn primary" data-open="${esc(f.file)}">Открыть</button>
+      </div>
+    </div>
+  `).join('') + '</div>';
+
+  // Bind clicks
+  listEl.querySelectorAll('.archive-item').forEach(item => {
+    item.addEventListener('click', e => {
+      if (e.target.closest('[data-open]')) return; // open button handled separately
+      const fn = item.dataset.file;
+      if (selectedFiles.has(fn)) selectedFiles.delete(fn);
+      else selectedFiles.add(fn);
+      renderArchive();
+      updateCompareButton();
+    });
+  });
+  listEl.querySelectorAll('[data-open]').forEach(b => {
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      openArchiveFile(b.dataset.open);
+    });
+  });
+};
+
+const updateCompareButton = () => {
+  const btn = document.getElementById('archCompare');
+  btn.disabled = selectedFiles.size < 2;
+  btn.textContent = selectedFiles.size >= 2
+    ? `📑 Сравнить выбранные (${selectedFiles.size})`
+    : '📑 Сравнить выбранные';
+
+  const cmpTab = document.getElementById('cmpTab');
+  const cmpBadge = document.getElementById('cmpBadge');
+  if (selectedFiles.size >= 1) {
+    cmpTab.style.display = '';
+    cmpBadge.textContent = selectedFiles.size;
+  } else {
+    cmpTab.style.display = 'none';
+  }
+};
+
+document.getElementById('archSelAll').addEventListener('click', () => {
+  archiveFiles.forEach(f => selectedFiles.add(f.file));
+  renderArchive();
+  updateCompareButton();
+});
+document.getElementById('archDeselAll').addEventListener('click', () => {
+  selectedFiles.clear();
+  renderArchive();
+  updateCompareButton();
+});
+document.getElementById('archCompare').addEventListener('click', async () => {
+  if (selectedFiles.size < 2) return;
+  await runComparison();
+});
+
+// Open a single archive file — loads it, parses, shows in Report tab
+const openArchiveFile = async (fileName) => {
+  switchTab('report');
+  document.getElementById('busyZone').style.display = '';
+  document.getElementById('dropZone').style.display = 'none';
+  document.getElementById('errorZone').style.display = 'none';
+  document.getElementById('dashboard').innerHTML = '';
+  try {
+    const resp = await fetch(ARCHIVE_FILES_BASE + fileName, { cache: 'no-cache' });
+    if (!resp.ok) throw new Error('Файл недоступен: ' + fileName);
+    const buf = await resp.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true });
+    const a = buildAnalytics(wb);
+    if (!a) { showError('Не удалось распознать структуру файла.'); document.getElementById('busyZone').style.display = 'none'; return; }
+    analytics = a;
+    currentFileName = fileName;
+    const meta = archiveFiles.find(f => f.file === fileName);
+    document.getElementById('fname').textContent = '📎 ' + (meta?.name || fileName);
+    document.getElementById('busyZone').style.display = 'none';
+    renderDashboard(a);
+  } catch (e) {
+    showError('Ошибка загрузки из архива: ' + e.message);
+    document.getElementById('busyZone').style.display = 'none';
+    document.getElementById('dropZone').style.display = '';
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// COMPARISON of multiple files — side-by-side charts
+// ─────────────────────────────────────────────────────────────────────────
+const cmpCharts = [];
+const runComparison = async () => {
+  switchTab('compare');
+  const cont = document.getElementById('compareContent');
+  cont.innerHTML = `<div class="archive-loading"><div style="font-size:36px;margin-bottom:10px;">⏳</div><p style="color:var(--mid);">Загружаем и обрабатываем ${selectedFiles.size} файла(ов)…</p></div>`;
+
+  const selectedList = Array.from(selectedFiles);
+  const datasets = [];
+
+  for (const fn of selectedList) {
+    try {
+      const resp = await fetch(ARCHIVE_FILES_BASE + fn, { cache: 'no-cache' });
+      if (!resp.ok) throw new Error('404');
+      const buf = await resp.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true });
+      const a = buildAnalytics(wb);
+      if (a) {
+        const meta = archiveFiles.find(f => f.file === fn);
+        datasets.push({ fn, name: meta?.name || fn, period: meta?.period || '', a });
+      }
+    } catch (e) {
+      console.warn('Failed to load:', fn, e);
+    }
+  }
+
+  if (datasets.length < 2) {
+    cont.innerHTML = `<div class="archive-empty"><div class="archive-empty-icon">⚠️</div><p>Не удалось загрузить минимум 2 файла для сравнения</p></div>`;
+    return;
+  }
+
+  renderComparison(datasets);
+};
+
+const renderComparison = (ds) => {
+  // destroy old cmp charts
+  cmpCharts.forEach(c => c.destroy());
+  cmpCharts.length = 0;
+
+  const cont = document.getElementById('compareContent');
+  const names = ds.map(d => d.name);
+  const periods = ds.map(d => d.period || d.name);
+
+  // Short labels for x-axis (max 15 chars)
+  const shortLabels = periods.map(p => p.length > 18 ? p.slice(0, 18) + '…' : p);
+
+  let html = `
+    <div class="cmp-head">
+      <div>
+        <h2>📑 Сравнение периодов</h2>
+        <p>Сопоставление показателей качества по выбранным файлам (${ds.length})</p>
+        <div class="cmp-files">
+          ${periods.map(p => `<span class="cmp-file-tag">${esc(p)}</span>`).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Summary KPI comparison
+  html += `<div class="cmp-kpi-grid">
+    ${cmpKpiCard('Количество актов', ds.map(d => ({ name: d.period || d.name, val: fmt(d.a.totalUniqueActs) + ' шт' })))}
+    ${cmpKpiCard('Масса НСП', ds.map(d => ({ name: d.period || d.name, val: fmtT(d.a.totalMass) })))}
+    ${cmpKpiCard('Фиксация ОТК', ds.map(d => ({ name: d.period || d.name, val: fmtT(d.a.massOTK) })))}
+    ${cmpKpiCard('Производство (самоконтроль)', ds.map(d => ({ name: d.period || d.name, val: fmtT(d.a.massProd) })))}
+  </div>`;
+
+  // Section 1: Actss by type (counts)
+  html += sectionHead(1, 'Количество актов по видам — сравнение', C.sky);
+  html += `<div class="grid-2">
+    ${cardHTML('Акты И (технический контроль)', `<div class="chart-box" style="height:280px;"><canvas id="cmp_actsI"></canvas></div>`, C.sky)}
+    ${cardHTML('Карты К (инспекционный контроль)', `<div class="chart-box" style="height:280px;"><canvas id="cmp_actsK"></canvas></div>`, C.orange)}
+  </div>`;
+  html += `<div style="margin-top:20px;">${cardHTML('Самоконтроль С', `<div class="chart-box" style="height:280px;"><canvas id="cmp_actsS"></canvas></div>`, C.cyan, true)}</div>`;
+
+  // Section 2: Mass by type
+  html += sectionHead(2, 'Масса НСП по типам — сравнение (кг)', C.orange);
+  html += `<div class="grid-2">
+    ${cardHTML('Масса по актам И', `<div class="chart-box" style="height:280px;"><canvas id="cmp_massI"></canvas></div>`, C.sky)}
+    ${cardHTML('Масса по картам К', `<div class="chart-box" style="height:280px;"><canvas id="cmp_massK"></canvas></div>`, C.orange)}
+  </div>`;
+  html += `<div style="margin-top:20px;">${cardHTML('Масса по самоконтролю С', `<div class="chart-box" style="height:280px;"><canvas id="cmp_massS"></canvas></div>`, C.cyan, true)}</div>`;
+
+  // Section 3: Total mass comparison
+  html += sectionHead(3, 'Общая масса НСП — сравнение (кг)', C.red);
+  html += cardHTML('Общая масса по периодам', `<div class="chart-box" style="height:320px;"><canvas id="cmp_totalMass"></canvas></div>`, C.red, true);
+
+  // Section 4: OTK vs Production
+  html += sectionHead(4, 'ОТК vs Производство — сравнение (кг)', C.teal);
+  html += cardHTML('Распределение по этапам выявления', `<div class="chart-box" style="height:340px;"><canvas id="cmp_stages"></canvas></div>`, C.teal, true);
+
+  // Section 5: Units comparison
+  const allUnits = new Set();
+  ds.forEach(d => Object.keys(d.a.massByUnit).forEach(u => allUnits.add(u)));
+  const unitList = Array.from(allUnits).filter(u => u !== 'Не определено');
+  html += sectionHead(5, 'По участкам — сравнение (кг)', C.purple);
+  html += cardHTML('Масса НСП по участкам', `<div class="chart-box" style="height:${Math.max(320, unitList.length * 60)}px;"><canvas id="cmp_units"></canvas></div>`, C.purple, true);
+
+  // Section 6: Top defects comparison
+  const allDefs = {};
+  ds.forEach(d => Object.entries(d.a.massByDefect).forEach(([k,v]) => { allDefs[k] = (allDefs[k]||0) + v; }));
+  const topDefs = Object.entries(allDefs).sort((a,b)=>b[1]-a[1]).slice(0, 8).map(([k])=>k);
+  html += sectionHead(6, 'Топ-8 дефектов — сравнение (кг)', C.red);
+  html += cardHTML('Масса НСП по видам дефектов', `<div class="chart-box" style="height:${Math.max(380, topDefs.length * 45)}px;"><canvas id="cmp_defects"></canvas></div>`, C.red, true);
+
+  // Section 7: Criticality comparison
+  html += sectionHead(7, 'Критичность несоответствий — сравнение (кг)', C.orange);
+  html += cardHTML('Распределение по категориям критичности', `<div class="chart-box" style="height:340px;"><canvas id="cmp_crit"></canvas></div>`, C.orange, true);
+
+  cont.innerHTML = html;
+
+  // Build all comparison charts
+  buildCmpCharts(ds, shortLabels, periods, unitList, topDefs);
+};
+
+const cmpKpiCard = (title, rows) => `
+  <div class="cmp-kpi-card">
+    <div class="cmp-kpi-title">${esc(title)}</div>
+    <div class="cmp-kpi-rows">
+      ${rows.map(r => `<div class="cmp-kpi-row"><span class="cmp-kpi-name">${esc(r.name)}</span><span class="cmp-kpi-val">${esc(r.val)}</span></div>`).join('')}
+    </div>
+  </div>
+`;
+
+const buildCmpCharts = (ds, shortLabels, periods, unitList, topDefs) => {
+  const mkChart = (id, cfg) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const c = new Chart(el.getContext('2d'), cfg);
+    cmpCharts.push(c);
+  };
+
+  const tt = (u) => ({
+    backgroundColor: 'rgba(255,255,255,0.98)',
+    titleColor: C.navy, bodyColor: C.dark, borderColor: C.light, borderWidth: 1,
+    titleFont: { weight: 'bold', size: 13 }, bodyFont: { size: 13 },
+    padding: 10, cornerRadius: 8,
+    callbacks: {
+      title: items => periods[items[0].dataIndex] || items[0].label,
+      label: ctx => `${fmt(ctx.parsed.y ?? ctx.parsed.x ?? ctx.parsed)} ${u}`,
+    }
+  });
+
+  const valLabel = (suffix='') => ({
+    color: C.dark, anchor: 'end', align: 'end', offset: 4, clamp: true,
+    font: { size: 11, weight: 'bold' },
+    formatter: v => v == null || v === 0 ? '' : fmt(v) + suffix,
+  });
+
+  // Acts I
+  mkChart('cmp_actsI', {
+    type: 'bar',
+    data: { labels: shortLabels, datasets: [{ label: 'Акты И', data: ds.map(d => d.a.uniqueActsCount['Акт техн. контроля'] || 0), backgroundColor: C.sky, borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tt('шт'), datalabels: { ...valLabel(' шт') } }, scales: { x: { grid: { display: false } }, y: { ticks: { precision: 0 } } }, layout: { padding: { top: 28 } } }
+  });
+  mkChart('cmp_actsK', {
+    type: 'bar',
+    data: { labels: shortLabels, datasets: [{ label: 'Карты К', data: ds.map(d => d.a.uniqueActsCount['Карта инспекц. контроля'] || 0), backgroundColor: C.orange, borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tt('шт'), datalabels: { ...valLabel(' шт') } }, scales: { x: { grid: { display: false } }, y: { ticks: { precision: 0 } } }, layout: { padding: { top: 28 } } }
+  });
+  mkChart('cmp_actsS', {
+    type: 'bar',
+    data: { labels: shortLabels, datasets: [{ label: 'Самоконтроль', data: ds.map(d => d.a.uniqueActsCount['Самоконтроль'] || 0), backgroundColor: C.cyan, borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tt('шт'), datalabels: { ...valLabel(' шт') } }, scales: { x: { grid: { display: false } }, y: { ticks: { precision: 0 } } }, layout: { padding: { top: 28 } } }
+  });
+
+  // Mass by type
+  mkChart('cmp_massI', {
+    type: 'bar',
+    data: { labels: shortLabels, datasets: [{ label: 'Масса И (кг)', data: ds.map(d => Math.round(d.a.massByType['Акт техн. контроля'] || 0)), backgroundColor: C.sky, borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tt('кг'), datalabels: valLabel() }, scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => fmt(v) } } }, layout: { padding: { top: 28 } } }
+  });
+  mkChart('cmp_massK', {
+    type: 'bar',
+    data: { labels: shortLabels, datasets: [{ label: 'Масса К (кг)', data: ds.map(d => Math.round(d.a.massByType['Карта инспекц. контроля'] || 0)), backgroundColor: C.orange, borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tt('кг'), datalabels: valLabel() }, scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => fmt(v) } } }, layout: { padding: { top: 28 } } }
+  });
+  mkChart('cmp_massS', {
+    type: 'bar',
+    data: { labels: shortLabels, datasets: [{ label: 'Масса С (кг)', data: ds.map(d => Math.round(d.a.massByType['Самоконтроль'] || 0)), backgroundColor: C.cyan, borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tt('кг'), datalabels: valLabel() }, scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => fmt(v) } } }, layout: { padding: { top: 28 } } }
+  });
+
+  // Total mass
+  mkChart('cmp_totalMass', {
+    type: 'bar',
+    data: { labels: shortLabels, datasets: [{ label: 'Общая масса НСП (кг)', data: ds.map(d => Math.round(d.a.totalMass)), backgroundColor: ds.map((_,i) => PAL[i % PAL.length]), borderRadius: 8 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tt('кг'), datalabels: valLabel() }, scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => fmt(v) } } }, layout: { padding: { top: 28 } } }
+  });
+
+  // OTK vs Prod (grouped)
+  mkChart('cmp_stages', {
+    type: 'bar',
+    data: {
+      labels: shortLabels,
+      datasets: [
+        { label: 'ОТК (И+К)', data: ds.map(d => Math.round(d.a.massOTK)), backgroundColor: C.sky, borderRadius: 6 },
+        { label: 'Производство (С)', data: ds.map(d => Math.round(d.a.massProd)), backgroundColor: C.orange, borderRadius: 6 },
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, boxWidth: 14 } }, tooltip: tt('кг'), datalabels: valLabel() }, scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => fmt(v) } } }, layout: { padding: { top: 28 } } }
+  });
+
+  // Units (horizontal grouped)
+  mkChart('cmp_units', {
+    type: 'bar',
+    data: {
+      labels: unitList,
+      datasets: ds.map((d, i) => ({
+        label: d.period || d.name,
+        data: unitList.map(u => Math.round(d.a.massByUnit[u] || 0)),
+        backgroundColor: PAL[i % PAL.length],
+        borderRadius: 4,
+      }))
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { font: { size: 12 }, boxWidth: 14 } }, tooltip: { ...tt('кг'), callbacks: { title: items => items[0].label, label: ctx => `${ctx.dataset.label}: ${fmt(ctx.parsed.x)} кг` } }, datalabels: { display: false } },
+      scales: { x: { ticks: { callback: v => fmt(v) } }, y: { grid: { display: false } } }
+    }
+  });
+
+  // Defects (horizontal grouped)
+  mkChart('cmp_defects', {
+    type: 'bar',
+    data: {
+      labels: topDefs.map(d => d.length > 35 ? d.slice(0, 35) + '…' : d),
+      datasets: ds.map((d, i) => ({
+        label: d.period || d.name,
+        data: topDefs.map(def => Math.round(d.a.massByDefect[def] || 0)),
+        backgroundColor: PAL[i % PAL.length],
+        borderRadius: 4,
+      }))
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { font: { size: 12 }, boxWidth: 14 } }, tooltip: { ...tt('кг'), callbacks: { title: items => topDefs[items[0].dataIndex], label: ctx => `${ctx.dataset.label}: ${fmt(ctx.parsed.x)} кг` } }, datalabels: { display: false } },
+      scales: { x: { ticks: { callback: v => fmt(v) } }, y: { grid: { display: false }, ticks: { font: { size: 10.5 } } } }
+    }
+  });
+
+  // Criticality
+  const critCats = ['Малозначительное', 'Устранимое', 'Неустранимое', 'В работе', 'Отработка технологии'];
+  const critColors = { 'Малозначительное': C.cyan, 'Устранимое': C.sky, 'Неустранимое': C.red, 'В работе': C.yellow, 'Отработка технологии': C.orange };
+  mkChart('cmp_crit', {
+    type: 'bar',
+    data: {
+      labels: shortLabels,
+      datasets: critCats.map(cat => ({
+        label: cat,
+        data: ds.map(d => Math.round(d.a.massByCrit[cat] || 0)),
+        backgroundColor: critColors[cat],
+        borderRadius: 4,
+      }))
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } }, tooltip: tt('кг'), datalabels: { display: false } }, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, ticks: { callback: v => fmt(v) } } } }
+  });
+};
+
+// Try loading archive badge on startup
+(async () => {
+  try {
+    const resp = await fetch(ARCHIVE_MANIFEST_URL, { cache: 'no-cache' });
+    if (resp.ok) {
+      const data = await resp.json();
+      const files = Array.isArray(data) ? data : (data.files || []);
+      document.getElementById('archBadge').textContent = files.length;
+    }
+  } catch {}
+})();
+</script>
+
+</body>
+</html>
