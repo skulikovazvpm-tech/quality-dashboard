@@ -1,9 +1,0 @@
-{
-  "appId": "com.prommash.quality",
-  "appName": "Продмаш Качество",
-  "webDir": "www",
-  "server": {
-    "url": "https://skulikovazvpm-tech.github.io/quality-dashboard/",
-    "cleartext": false
-  }
-}
