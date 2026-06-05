@@ -888,7 +888,7 @@ table tr.total-row { background: color-mix(in srgb, var(--brand-sky) 6%, var(--s
       <div class="sidebar-group">
         <div class="sidebar-group-label sidebar-group-rec">📨 Претензии</div>
         <button class="nav-item nav-rec" data-tab="rec-report"><span class="nav-ico">📊</span><span class="nav-txt">Отчёт Претензии</span></button>
-        <button class="nav-item nav-rec" data-tab="rec-archive"><span class="nav-ico">📚</span><span class="nav-txt">Архив Претензии</span></button>
+        <button class="nav-item nav-rec" data-tab="rec-archive"><span class="nav-ico">📚</span><span class="nav-txt">Архив Претензии</span><span class="nav-badge" id="recArchBadge">0</span></button>
         <button class="nav-item nav-rec" data-tab="rec-compare"><span class="nav-ico">📑</span><span class="nav-txt">Сравнение Претензии</span></button>
       </div>
     </nav>
@@ -3455,7 +3455,29 @@ const renderSectionsToPDF = async (sections, fileName, msgText) => {
   }
 
   if (msgText) msgText.textContent = 'Сохраняем…';
-  pdf.save(fileName);
+  
+  // Пытаемся скачать PDF разными способами
+  try {
+    // Метод 1: стандартный jsPDF.save()
+    pdf.save(fileName);
+  } catch (e) {
+    // Метод 2: через Blob и ссылку
+    try {
+      const pdfBlob = pdf.output('blob');
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (e2) {
+      // Метод 3: вывод в новом окне
+      window.open(pdf.output('dataurlstring'));
+      throw new Error('Не удалось скачать PDF. Открыт в новом окне.');
+    }
+  }
 
   } finally {
     // ── Возвращаем тему пользователя
@@ -3780,6 +3802,7 @@ const switchTab = (name) => {
   document.querySelectorAll('.nav-item').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + name));
   if (name === 'archive') loadArchive();
+  if (name === 'rec-archive') loadRecArchive();
   // Управление кнопкой PDF и именем файла в шапке
   updatePdfButtonVisibility(name);
 };
@@ -6269,6 +6292,7 @@ const loadRecArchive = async () => {
     recArchiveFiles = Array.isArray(data) ? data : (data.files || []);
     recArchiveFiles.sort((a,b) => (b.date || '').localeCompare(a.date || ''));
     recArchiveLoaded = true;
+    document.getElementById('recArchBadge').textContent = recArchiveFiles.length;
     renderRecArchive();
   } catch (e) {
     listEl.innerHTML = `
