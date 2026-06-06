@@ -2408,7 +2408,6 @@ const renderDashboard = a => {
             </div>
           </div>
         </div>
-        ${cardHTML('Накопительный тоннаж', `<div class="chart-box" style="height:400px;"><canvas id="ch_unkCumKg"></canvas></div>`, C.orange, true)}
         <div class="grid-2">
           ${a.unkGroupTop && a.unkGroupTop.length ? cardHTML('Где теряется ответственность — по продукции', `<div id="unkGroupTable" class="table-wrap"></div>`, C.purple, false) : ''}
           ${a.unkDefectTop && a.unkDefectTop.length ? cardHTML('Типы несоответствий без ответственного', `<div id="unkDefectTable" class="table-wrap"></div>`, C.sky, false) : ''}
