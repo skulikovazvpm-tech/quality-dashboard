@@ -2083,12 +2083,6 @@ const labelStacked = (suffix = '') => ({
   formatter: v => v < 50 ? '' : fmt(v),
 });
 
-const labelStacked = (suffix = '') => ({
-  color: '#fff', anchor: 'center', align: 'center',
-  font: { size: 9.5, weight: 'bold' },
-  formatter: v => v < 50 ? '' : fmt(v),
-});
-
 // ─────────────────────────────────────────────────────────────────────────
 let analytics = null;
 window.__getAnalytics = () => analytics;
