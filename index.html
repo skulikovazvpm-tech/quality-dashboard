@@ -3352,16 +3352,19 @@ const renderSectionsToPDF = async (sections, fileName, msgText) => {
 
   try {
     
-    // Собираем атомарные блоки рекурсивно — работает и для отчётов АН/Претензии,
-    // и для контейнеров сравнения (#compareContent, #recCompareContent)
+    // Собираем атомарные блоки с защитой от дубликатов.
+    // grid-1/grid-2 НЕ прозрачные — ряд из 2 карточек идёт одной картинкой
+    // и красиво помещается на странице, а не растягивается каждая на лист.
     const blocks = [];
-    const TRANSPARENT = ['pdf-section', 'grid-1', 'grid-2', 'unit-shift-panel'];
+    const seen = new Set();
+    const TRANSPARENT = ['pdf-section', 'unit-shift-panel'];
     const walk = (el) => {
-      if (!el || !el.offsetHeight) return;
-      const isTransparent = TRANSPARENT.some(c => el.classList && el.classList.contains(c));
+      if (!el || !el.offsetHeight || seen.has(el)) return;
+      const isTransparent = el.classList && TRANSPARENT.some(c => el.classList.contains(c));
       if (isTransparent) {
         Array.from(el.children).forEach(walk);
       } else {
+        seen.add(el);
         blocks.push(el);
       }
     };
