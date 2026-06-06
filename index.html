@@ -2061,30 +2061,27 @@ const tooltipCfg = (unit = 'кг') => {
   };
 };
 
-// Universal label configs — labels appear ALWAYS
-const labelTop = (suffix = '') => {
-  const dark = getTheme() === 'dark';
-  return {
-    color: '#fff', anchor: 'end', align: 'end', offset: 4, clamp: true,
-    font: { size: 10, weight: 'bold' },
-    backgroundColor: dark ? 'rgba(15,28,50,0.95)' : 'rgba(10,38,71,0.85)',
-    borderRadius: 3,
-    padding: { left: 3, right: 3, top: 1, bottom: 1 },
-    formatter: v => v == null || v === 0 ? '' : fmt(v) + suffix,
-  };
-};
+// Universal label configs — clean text, no dark pills
+const labelTop = (suffix = '') => ({
+  color: getTheme() === 'dark' ? '#e2ecf8' : '#0a2647',
+  anchor: 'end', align: 'end', offset: 6, clamp: true,
+  font: { size: 11, weight: 'bold' },
+  formatter: v => v == null || v === 0 ? '' : fmt(v) + suffix,
+});
 
-const labelRight = (suffix = ' кг') => {
-  const dark = getTheme() === 'dark';
-  return {
-    color: '#fff', anchor: 'end', align: 'right', offset: 4, clamp: true,
-    font: { size: 10, weight: 'bold' },
-    backgroundColor: dark ? 'rgba(15,28,50,0.95)' : 'rgba(10,38,71,0.85)',
-    borderRadius: 3,
-    padding: { left: 3, right: 3, top: 1, bottom: 1 },
-    formatter: v => v == null || v === 0 ? '' : fmt(v) + suffix,
-  };
-};
+const labelRight = (suffix = ' кг') => ({
+  color: getTheme() === 'dark' ? '#e2ecf8' : '#0a2647',
+  anchor: 'end', align: 'right', offset: 6, clamp: true,
+  font: { size: 11, weight: 'bold' },
+  formatter: v => v == null || v === 0 ? '' : fmt(v) + suffix,
+});
+
+const labelStacked = (suffix = '') => ({
+  color: '#fff', anchor: 'center', align: 'center',
+  font: { size: 10, weight: 'bold' },
+  textStrokeColor: 'rgba(0,0,0,0.4)', textStrokeWidth: 2,
+  formatter: v => v < 50 ? '' : fmt(v),
+});
 
 const labelStacked = (suffix = '') => ({
   color: '#fff', anchor: 'center', align: 'center',
@@ -3338,150 +3335,120 @@ const exportPDF = async () => {
 const renderSectionsToPDF = async (sections, fileName, msgText) => {
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF('p', 'mm', 'a4');
-  const pdfW = 210;
-  const pdfH = 297;
-  const margin = 8;
+  const pdfW = 210, pdfH = 297, margin = 10;
   const contentW = pdfW - margin * 2;
   const contentH = pdfH - margin * 2;
-  const GAP = 4; // зазор между секциями в мм
-  const MIN_SLICE_MM = 5; // минимальная высота слайса — всё что меньше отбрасываем (иначе пустая полоса)
+  const GAP = 3;
 
-  // ── PDF всегда на светлом фоне → принудительно переключаем приложение
-  //    в светлую тему на время захвата, потом возвращаем тему пользователя.
+  // PDF всегда на светлом фоне
   const prevTheme = document.documentElement.getAttribute('data-theme');
   let themeWasSwitched = false;
   if (prevTheme === 'dark') {
     document.documentElement.setAttribute('data-theme', 'light');
     if (window.applyChartTheme) window.applyChartTheme('light');
     themeWasSwitched = true;
-    // даём графикам перерисоваться
     await new Promise(r => setTimeout(r, 400));
   }
 
-  let yPos = margin;
-  let pageIndex = 0; // 0 = первая страница PDF (она уже создана jsPDF-конструктором)
+  // Принудительно пересобираем графики под текущий размер
+  if (window.allCharts) {
+    window.allCharts.forEach(c => { try { c.resize(); } catch(e){} });
+  }
+  await new Promise(r => setTimeout(r, 350));
 
   try {
+    
+    // Собираем атомарные блоки рекурсивно — работает и для отчётов АН/Претензии,
+    // и для контейнеров сравнения (#compareContent, #recCompareContent)
+    const blocks = [];
+    const TRANSPARENT = ['pdf-section', 'grid-1', 'grid-2', 'unit-shift-panel'];
+    const walk = (el) => {
+      if (!el || !el.offsetHeight) return;
+      const isTransparent = TRANSPARENT.some(c => el.classList && el.classList.contains(c));
+      if (isTransparent) {
+        Array.from(el.children).forEach(walk);
+      } else {
+        blocks.push(el);
+      }
+    };
+    sections.forEach(sec => {
+      Array.from(sec.children).forEach(walk);
+    });
 
-  for (let i = 0; i < sections.length; i++) {
-    const sec = sections[i];
-    if (msgText) msgText.textContent = `Рендерим секцию ${i+1} из ${sections.length}…`;
-    await new Promise(r => setTimeout(r, 30));
-
-    const canvas = await html2canvas(sec, {
+    const captureOpts = {
       scale: 1.6,
       backgroundColor: '#ffffff',
       logging: false,
       useCORS: true,
       windowWidth: 1340,
       onclone: (clonedDoc) => {
-        // Принудительно завершаем анимации появления в клоне,
-        // иначе html2canvas-pro захватывает opacity:0 (выцветший PDF)
-        clonedDoc.querySelectorAll('.kpi, .card, .kpi-bar-fill').forEach(el => {
+        clonedDoc.querySelectorAll('.kpi, .card').forEach(el => {
           el.style.opacity = '1';
           el.style.transform = 'none';
           el.style.animation = 'none';
         });
-        // KPI-бары: ставим финальную ширину
         clonedDoc.querySelectorAll('.kpi-bar-fill').forEach(el => {
-          const pct = el.dataset.pct || 0;
-          el.style.width = pct + '%';
+          el.style.width = (el.dataset.pct || 0) + '%';
+        });
+        clonedDoc.querySelectorAll('.sidebar, .sidebar-overlay').forEach(el => {
+          el.style.display = 'none';
         });
       },
-    });
+    };
 
-    const imgW = contentW;
-    const fullImgH = (canvas.height * imgW) / canvas.width;
+    let yPos = margin;
 
-    if (fullImgH <= contentH) {
-      // ── Секция помещается на одну страницу ──
-      // Если не влезает в остаток текущей страницы — новая страница
-      if (yPos + fullImgH > pdfH - margin) {
-        pdf.addPage();
-        pageIndex++;
-        yPos = margin;
-      }
-      const imgData = canvas.toDataURL('image/jpeg', 0.85);
-      pdf.addImage(imgData, 'JPEG', margin, yPos, imgW, fullImgH, undefined, 'FAST');
-      yPos += fullImgH + GAP;
-    } else {
-      // ── Секция больше страницы — режем на слайсы ──
-      // Начинаем с новой страницы (если ещё не на новой)
-      if (yPos > margin + 0.5) {
-        pdf.addPage();
-        pageIndex++;
-        yPos = margin;
-      }
+    for (let i = 0; i < blocks.length; i++) {
+      const block = blocks[i];
+      if (!block || !block.offsetHeight) continue;
+      if (msgText) msgText.textContent = `Блок ${i+1} из ${blocks.length}…`;
+      await new Promise(r => setTimeout(r, 20));
 
-      // сколько пикселей исходного canvas влезает на одну страницу PDF
-      const pxPerMm = canvas.width / imgW;
-      const slicePxHeight = Math.floor(contentH * pxPerMm);
+      const canvas = await html2canvas(block, captureOpts);
+      const imgW = contentW;
+      const imgH = (canvas.height * imgW) / canvas.width;
 
-      let sourceY = 0;
-      let isFirstSliceOfSection = true;
-
-      while (sourceY < canvas.height) {
-        // Если не первый слайс — новая страница
-        if (!isFirstSliceOfSection) {
+      if (imgH <= contentH) {
+        // Блок умещается на странице целиком
+        if (yPos + imgH > pdfH - margin) {
           pdf.addPage();
-          pageIndex++;
           yPos = margin;
         }
-
-        const remainingPx = canvas.height - sourceY;
-        const thisSlicePx = Math.min(slicePxHeight, remainingPx);
-        const thisSliceMm = thisSlicePx / pxPerMm;
-
-        // Если остаток слишком маленький — не создаём страницу ради 2-3 мм мусора
-        if (thisSliceMm < MIN_SLICE_MM && !isFirstSliceOfSection) {
-          break;
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', margin, yPos, imgW, imgH, undefined, 'FAST');
+        yPos += imgH + GAP;
+      } else {
+        // Блок выше страницы — режем на слайсы
+        if (yPos > margin + 0.5) {
+          pdf.addPage();
+          yPos = margin;
         }
-
-        const tmp = document.createElement('canvas');
-        tmp.width = canvas.width;
-        tmp.height = thisSlicePx;
-        const tctx = tmp.getContext('2d');
-        tctx.fillStyle = '#ffffff';
-        tctx.fillRect(0, 0, canvas.width, thisSlicePx);
-        tctx.drawImage(canvas, 0, sourceY, canvas.width, thisSlicePx, 0, 0, canvas.width, thisSlicePx);
-        const sliceData = tmp.toDataURL('image/jpeg', 0.85);
-
-        pdf.addImage(sliceData, 'JPEG', margin, margin, imgW, thisSliceMm, undefined, 'FAST');
-        yPos = margin + thisSliceMm + GAP;
-
-        sourceY += thisSlicePx;
-        isFirstSliceOfSection = false;
+        const pxPerMm = canvas.width / imgW;
+        const slicePx = Math.floor(contentH * pxPerMm);
+        let sourceY = 0, first = true;
+        while (sourceY < canvas.height) {
+          if (!first) { pdf.addPage(); yPos = margin; }
+          const remPx = canvas.height - sourceY;
+          const thisPx = Math.min(slicePx, remPx);
+          const thisMm = thisPx / pxPerMm;
+          if (thisMm < 5 && !first) break;
+          const tmp = document.createElement('canvas');
+          tmp.width = canvas.width;
+          tmp.height = thisPx;
+          const tctx = tmp.getContext('2d');
+          tctx.fillStyle = '#ffffff';
+          tctx.fillRect(0, 0, canvas.width, thisPx);
+          tctx.drawImage(canvas, 0, sourceY, canvas.width, thisPx, 0, 0, canvas.width, thisPx);
+          pdf.addImage(tmp.toDataURL('image/jpeg', 0.9), 'JPEG', margin, yPos, imgW, thisMm, undefined, 'FAST');
+          yPos = margin + thisMm + GAP;
+          sourceY += thisPx;
+          first = false;
+        }
       }
     }
-  }
 
-  if (msgText) msgText.textContent = 'Сохраняем…';
-  
-  // Пытаемся скачать PDF разными способами
-  try {
-    // Метод 1: стандартный jsPDF.save()
+    if (msgText) msgText.textContent = 'Сохраняем…';
     pdf.save(fileName);
-  } catch (e) {
-    // Метод 2: через Blob и ссылку
-    try {
-      const pdfBlob = pdf.output('blob');
-      const url = URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (e2) {
-      // Метод 3: вывод в новом окне
-      window.open(pdf.output('dataurlstring'));
-      throw new Error('Не удалось скачать PDF. Открыт в новом окне.');
-    }
-  }
-
   } finally {
-    // ── Возвращаем тему пользователя
     if (themeWasSwitched) {
       document.documentElement.setAttribute('data-theme', prevTheme);
       if (window.applyChartTheme) window.applyChartTheme(prevTheme);
