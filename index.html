@@ -496,13 +496,13 @@ body {
 /* ═══════════════════════════════════════════════════════════════
    COMPARISON
 ═══════════════════════════════════════════════════════════════ */
-.cmp-head { background: linear-gradient(135deg, var(--purple), #4c1d95); color: #fff; padding: 20px 26px; border-radius: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.cmp-head { background: linear-gradient(135deg, #0a2647, #1a4a8a); color: #fff; padding: 20px 26px; border-radius: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-left: 5px solid var(--brand-orange); }
 .cmp-head h2 { font-size: 19px; font-weight: 900; margin: 0; }
 .cmp-head p { font-size: 13px; opacity: .9; margin-top: 4px; }
 .cmp-files { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .cmp-file-tag { background: rgba(255,255,255,.2); padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
 .cmp-kpi-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-bottom: 24px; }
-.cmp-kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; border-top: 3px solid var(--purple); }
+.cmp-kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; border-top: 3px solid var(--brand-orange); }
 .cmp-kpi-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .8px; font-weight: 700; margin-bottom: 10px; }
 .cmp-kpi-rows { display: flex; flex-direction: column; gap: 6px; }
 .cmp-kpi-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: var(--bg); border-radius: 6px; }
@@ -1033,7 +1033,7 @@ function checkPassword() {
     const labelColor  = isDark ? '#e2ecf8' : '#1e293b';
     const legendColor = isDark ? '#c8daf0' : '#334155';
     const gridColor   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
-    const dlBg        = isDark ? 'rgba(15,28,50,0.92)' : 'rgba(255,255,255,0.90)';
+    const dlBg        = isDark ? 'rgba(15,28,50,0.95)' : 'rgba(10,38,71,0.85)';
     const tooltipBg   = isDark ? 'rgba(15,28,55,0.97)' : 'rgba(255,255,255,0.98)';
     const tooltipTitle= isDark ? '#90c4f8' : '#0a2647';
     const tooltipBody = isDark ? '#c8daf0' : '#334155';
@@ -1065,18 +1065,16 @@ function checkPassword() {
           // ── Datalabels (plugin-level) ──
           if (ch.config?.options?.plugins?.datalabels) {
             const dl = ch.config.options.plugins.datalabels;
-            // Only update non-white labels (white = inside bars, leave as-is)
-            if (typeof dl.color === 'string' && dl.color !== '#fff') {
-              dl.color = labelColor;
-              if (dl.backgroundColor) dl.backgroundColor = dlBg;
-            }
+            // Always use white text on dark background for external labels
+            dl.color = '#fff';
+            if (dl.backgroundColor) dl.backgroundColor = dlBg;
             // textStrokeColor if present — keep as-is
           }
           // ── Dataset-level datalabels ──
           if (ch.config?.data?.datasets) {
             ch.config.data.datasets.forEach(ds => {
-              if (ds.datalabels && typeof ds.datalabels.color === 'string' && ds.datalabels.color !== '#fff') {
-                ds.datalabels.color = labelColor;
+              if (ds.datalabels) {
+                ds.datalabels.color = '#fff';
                 if (ds.datalabels.backgroundColor) ds.datalabels.backgroundColor = dlBg;
               }
             });
@@ -2073,9 +2071,9 @@ const tooltipCfg = (unit = 'кг') => {
 const labelTop = (suffix = '') => {
   const dark = getTheme() === 'dark';
   return {
-    color: dark ? '#e2ecf8' : '#1e293b', anchor: 'end', align: 'end', offset: 4, clamp: true,
+    color: '#fff', anchor: 'end', align: 'end', offset: 4, clamp: true,
     font: { size: 10, weight: 'bold' },
-    backgroundColor: dark ? 'rgba(15,28,50,0.88)' : 'rgba(255,255,255,0.82)',
+    backgroundColor: dark ? 'rgba(15,28,50,0.95)' : 'rgba(10,38,71,0.85)',
     borderRadius: 3,
     padding: { left: 3, right: 3, top: 1, bottom: 1 },
     formatter: v => v == null || v === 0 ? '' : fmt(v) + suffix,
@@ -2085,9 +2083,9 @@ const labelTop = (suffix = '') => {
 const labelRight = (suffix = ' кг') => {
   const dark = getTheme() === 'dark';
   return {
-    color: dark ? '#e2ecf8' : '#1e293b', anchor: 'end', align: 'right', offset: 4, clamp: true,
+    color: '#fff', anchor: 'end', align: 'right', offset: 4, clamp: true,
     font: { size: 10, weight: 'bold' },
-    backgroundColor: dark ? 'rgba(15,28,50,0.88)' : 'rgba(255,255,255,0.82)',
+    backgroundColor: dark ? 'rgba(15,28,50,0.95)' : 'rgba(10,38,71,0.85)',
     borderRadius: 3,
     padding: { left: 3, right: 3, top: 1, bottom: 1 },
     formatter: v => v == null || v === 0 ? '' : fmt(v) + suffix,
@@ -4442,16 +4440,16 @@ const buildCmpCharts = (ds, shortLabels, periods, unitList, topDefs, topCauses, 
   };
 
   const labelTop = (suffix='') => ({
-    color: getTheme()==='dark'?'#e2ecf8':'#1e293b', anchor: 'end', align: 'end', offset: 4, clamp: true,
-    backgroundColor: getTheme()==='dark'?'rgba(15,28,50,0.92)':'rgba(255,255,255,0.88)', borderRadius: 3, padding: { left: 3, right: 3, top: 1, bottom: 1 },
+    color: '#fff', anchor: 'end', align: 'end', offset: 4, clamp: true,
+    backgroundColor: getTheme()==='dark'?'rgba(15,28,50,0.95)':'rgba(10,38,71,0.85)', borderRadius: 3, padding: { left: 3, right: 3, top: 1, bottom: 1 },
     font: { size: 11, weight: 'bold' },
     formatter: v => v == null || v === 0 ? '' : fmt(v) + suffix,
   });
 
   const labelRight = (suffix=' кг') => ({
-    color: getTheme()==='dark'?'#e2ecf8':'#1e293b', anchor: 'end', align: 'right', offset: 4, clamp: true,
-    backgroundColor: getTheme()==='dark'?'rgba(15,28,50,0.92)':'rgba(255,255,255,0.88)', borderRadius: 3, padding: { left: 3, right: 3, top: 1, bottom: 1 },
-    font: { size: 10, weight: 'bold' },
+    color: '#fff', anchor: 'end', align: 'right', offset: 4, clamp: true,
+    backgroundColor: getTheme()==='dark'?'rgba(15,28,50,0.95)':'rgba(10,38,71,0.85)', borderRadius: 3, padding: { left: 3, right: 3, top: 1, bottom: 1 },
+    font: { size: 11, weight: 'bold' },
     formatter: v => v == null || v === 0 ? '' : fmt(v) + suffix,
   });
 
@@ -4525,11 +4523,11 @@ const buildCmpCharts = (ds, shortLabels, periods, unitList, topDefs, topCauses, 
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { position: 'top', labels: { font: { size: 12 }, boxWidth: 14, color: getTheme()==='dark'?'#c8daf0':'#334155' } },
-        tooltip: { ...tt('кг'), callbacks: { title: items => items[0].label, label: ctx => `${ctx.dataset.label}: ${fmt(ctx.parsed.x)} кг` } },
+        tooltip: { ...tt('кг'), callbacks: { title: items => periods[items[0].dataIndex] || items[0].label, label: ctx => `${fmt(ctx.parsed.x)} ${u}` } },
         datalabels: labelRight(),
       },
-      scales: { x: { ticks: { callback: v => fmt(v) } }, y: { grid: { display: false } } },
-      layout: { padding: { right: 90 } }
+      scales: { x: { ticks: { callback: v => fmt(v), font: { size: 11, weight: 'bold' }, color: getTheme()==='dark'?'#c8daf0':'#0a2647' } }, y: { grid: { display: false }, ticks: { font: { size: 11, weight: 600 }, color: getTheme()==='dark'?'#c8daf0':'#0a2647' } } },
+      layout: { padding: { right: 100 } }
     }
   });
 
@@ -4633,8 +4631,8 @@ const buildCmpCharts = (ds, shortLabels, periods, unitList, topDefs, topCauses, 
         tooltip: { ...tt('кг'), callbacks: { title: items => topDefs[items[0].dataIndex], label: ctx => `${ctx.dataset.label}: ${fmt(ctx.parsed.x)} кг` } },
         datalabels: labelRight(),
       },
-      scales: { x: { ticks: { callback: v => fmt(v) } }, y: { grid: { display: false }, ticks: { font: { size: 10.5 }, color: getTheme()==='dark'?'#c8daf0':'#475569' } } },
-      layout: { padding: { right: 100 } }
+      scales: { x: { ticks: { callback: v => fmt(v), font: { size: 11, weight: 'bold' }, color: getTheme()==='dark'?'#c8daf0':'#0a2647' } }, y: { grid: { display: false }, ticks: { font: { size: 11, weight: 600 }, color: getTheme()==='dark'?'#c8daf0':'#0a2647' } } },
+      layout: { padding: { right: 110 } }
     }
   });
 
@@ -4658,8 +4656,8 @@ const buildCmpCharts = (ds, shortLabels, periods, unitList, topDefs, topCauses, 
           tooltip: { callbacks: { title: items => topCauses[items[0].dataIndex], label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x} раз` } },
           datalabels: labelRight(' раз'),
         },
-        scales: { x: { ticks: { precision: 0, color: getTheme()==='dark'?'#c8daf0':'#475569' } }, y: { grid: { display: false }, ticks: { font: { size: 10.5 }, color: getTheme()==='dark'?'#c8daf0':'#475569' } } },
-        layout: { padding: { right: 70 } }
+        scales: { x: { ticks: { precision: 0, font: { size: 11, weight: 'bold' }, color: getTheme()==='dark'?'#c8daf0':'#0a2647' } }, y: { grid: { display: false }, ticks: { font: { size: 11, weight: 600 }, color: getTheme()==='dark'?'#c8daf0':'#0a2647' } } },
+        layout: { padding: { right: 80 } }
       }
     });
   }
@@ -4684,8 +4682,8 @@ const buildCmpCharts = (ds, shortLabels, periods, unitList, topDefs, topCauses, 
           tooltip: { callbacks: { title: items => topDetCauses[items[0].dataIndex], label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x} раз` } },
           datalabels: labelRight(' раз'),
         },
-        scales: { x: { ticks: { precision: 0, color: getTheme()==='dark'?'#c8daf0':'#475569' } }, y: { grid: { display: false }, ticks: { font: { size: 10.5 }, color: getTheme()==='dark'?'#c8daf0':'#475569' } } },
-        layout: { padding: { right: 70 } }
+        scales: { x: { ticks: { precision: 0, font: { size: 11, weight: 'bold' }, color: getTheme()==='dark'?'#c8daf0':'#0a2647' } }, y: { grid: { display: false }, ticks: { font: { size: 11, weight: 600 }, color: getTheme()==='dark'?'#c8daf0':'#0a2647' } } },
+        layout: { padding: { right: 80 } }
       }
     });
   }
@@ -4707,8 +4705,8 @@ const buildCmpCharts = (ds, shortLabels, periods, unitList, topDefs, topCauses, 
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, color: getTheme()==='dark'?'#c8daf0':'#334155' } }, tooltip: tt('кг'), datalabels: labelTop() },
-      scales: { x: { grid: { display: false }, ticks: { color: getTheme()==='dark'?'#c8daf0':'#475569' } }, y: { ticks: { callback: v => fmt(v), color: getTheme()==='dark'?'#c8daf0':'#475569' } } },
-      layout: { padding: { top: 28 } }
+      scales: { x: { grid: { display: false }, ticks: { font: { size: 11, weight: 'bold' }, color: getTheme()==='dark'?'#c8daf0':'#0a2647' } }, y: { ticks: { callback: v => fmt(v), font: { size: 11, weight: 'bold' }, color: getTheme()==='dark'?'#c8daf0':'#0a2647' } } },
+      layout: { padding: { top: 32 } }
     }
   });
 };
