@@ -834,7 +834,7 @@ table tr.total-row { background: color-mix(in srgb, var(--brand-sky) 6%, var(--s
       <div class="login-logo-icon">⚙️</div>
       <div class="login-logo-text">
         <div class="login-logo-name">АО «Завод Продмаш»</div>
-        <div class="login-logo-sub">Самара · Продовольственное машиностроение</div>
+        <div class="login-logo-sub">Самара</div>
       </div>
     </div>
     <div class="login-title">Аналитика качества</div>
@@ -2227,7 +2227,7 @@ const renderDashboard = a => {
             <div class="exec-trend" style="color:${lvlColor[neustLevel]};"><span class="exec-dot" style="background:${lvlColor[neustLevel]};"></span>${fmtT(neustMass)} массы</div>
           </div>
           <div class="exec-card" style="--accent:${lvlColor[selfControlLevel]};">
-            <div class="exec-card-label">Самоконтроль (зрелость)</div>
+            <div class="exec-card-label">Самоконтроль</div>
             <div class="exec-card-value">${prodPct.toFixed(0)}%</div>
             <div class="exec-trend" style="color:${lvlColor[selfControlLevel]};"><span class="exec-dot" style="background:${lvlColor[selfControlLevel]};"></span>${fmtT(a.massProd)} массы</div>
           </div>
@@ -2396,7 +2396,7 @@ const renderDashboard = a => {
 
     ${a.unkCumulative && a.unkCumulative.length ? `
       <div class="pdf-section">
-        ${sectionHead(15, 'Контроль установления ответственности (целевой показатель ↓)', C.red, 'Накопительный учёт несоответствий с неустановленной ответственностью («Невозможно установить»). Показатель должен СНИЖАТЬСЯ. Цель — отсутствие мест с неопределённой ответственностью.')}
+        ${sectionHead(15, 'Контроль установления ответственности (целевой показатель ↓)', C.red, 'Накопительный учёт несоответствий с неустановленной ответственностью («Невозможно установить»).')}
         <div class="unk-banner ${a.unkTotalLines > 0 ? 'unk-warn' : 'unk-ok'}">
           <div class="unk-banner-icon">${a.unkTotalLines > 0 ? '⚠️' : '✓'}</div>
           <div class="unk-banner-body">
