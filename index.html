@@ -3380,6 +3380,20 @@ const renderSectionsToPDF = async (sections, fileName, msgText) => {
       logging: false,
       useCORS: true,
       windowWidth: 1340,
+      onclone: (clonedDoc) => {
+        // Принудительно завершаем анимации появления в клоне,
+        // иначе html2canvas-pro захватывает opacity:0 (выцветший PDF)
+        clonedDoc.querySelectorAll('.kpi, .card, .kpi-bar-fill').forEach(el => {
+          el.style.opacity = '1';
+          el.style.transform = 'none';
+          el.style.animation = 'none';
+        });
+        // KPI-бары: ставим финальную ширину
+        clonedDoc.querySelectorAll('.kpi-bar-fill').forEach(el => {
+          const pct = el.dataset.pct || 0;
+          el.style.width = pct + '%';
+        });
+      },
     });
 
     const imgW = contentW;
