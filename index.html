@@ -521,9 +521,6 @@ body {
   box-shadow: var(--shadow-sm);
   transition: var(--transition);
   position: relative; overflow: hidden;
-  /* Fade-in + slide animation */
-  opacity: 0; transform: translateY(16px);
-  animation: kpiIn 0.5s ease forwards;
 }
 .kpi::before {
   content: ''; position: absolute; top: 0; right: 0;
@@ -564,9 +561,6 @@ body {
   padding: 20px 22px; box-shadow: var(--shadow-sm);
   border: 1px solid var(--border); break-inside: avoid; page-break-inside: avoid;
   transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
-  /* Fade in animation */
-  opacity: 0; transform: translateY(10px);
-  animation: cardFadeIn 0.5s ease forwards;
 }
 @keyframes cardFadeIn {
   to { opacity: 1; transform: translateY(0); }
