@@ -2408,11 +2408,7 @@ const renderDashboard = a => {
             </div>
           </div>
         </div>
-        <div class="grid-2">
-          ${cardHTML('Накопительная динамика (записи)', `<div class="chart-box" style="height:320px;"><canvas id="ch_unkCumLines"></canvas></div>`, C.red, false)}
-          ${cardHTML('Накопительный тоннаж', `<div class="chart-box" style="height:320px;"><canvas id="ch_unkCumKg"></canvas></div>`, C.orange, false)}
-        </div>
-        ${cardHTML('Доля «Невозможно установить» по месяцам (%) — цель: снижение', `<div class="chart-box" style="height:300px;"><canvas id="ch_unkPct"></canvas></div>`, C.red, true)}
+        ${cardHTML('Накопительный тоннаж', `<div class="chart-box" style="height:400px;"><canvas id="ch_unkCumKg"></canvas></div>`, C.orange, true)}
         <div class="grid-2">
           ${a.unkGroupTop && a.unkGroupTop.length ? cardHTML('Где теряется ответственность — по продукции', `<div id="unkGroupTable" class="table-wrap"></div>`, C.purple, false) : ''}
           ${a.unkDefectTop && a.unkDefectTop.length ? cardHTML('Типы несоответствий без ответственного', `<div id="unkDefectTable" class="table-wrap"></div>`, C.sky, false) : ''}
@@ -4194,11 +4190,7 @@ const renderCumulative = () => {
         </div>
       </div>
     </div>
-    <div class="grid-2" style="margin-top:14px;">
-      ${cardHTML('Накопительно — записи «Невозможно установить»', `<div class="chart-box" style="height:330px;"><canvas id="ch_cumLines"></canvas></div>`, C.red, false)}
-      ${cardHTML('Накопительно — тоннаж', `<div class="chart-box" style="height:330px;"><canvas id="ch_cumKg"></canvas></div>`, C.orange, false)}
-    </div>
-    ${cardHTML('Доля «Невозможно установить» по периодам (%) — цель: снижение', `<div class="chart-box" style="height:310px;"><canvas id="ch_cumPct"></canvas></div>`, C.red, true)}
+    ${cardHTML('Накопительно — тоннаж', `<div class="chart-box" style="height:380px;"><canvas id="ch_cumKg"></canvas></div>`, C.orange, true)}
   `;
 
   // Навешиваем обработчики кнопок (элементы только что созданы)
@@ -4213,16 +4205,7 @@ const renderCumulative = () => {
   const dlDark = getTheme()==='dark'?'#e2ecf8':'#1e293b';
   const mk = (id, cfg) => { const el = document.getElementById(id); if (!el) return; const ch = new Chart(el.getContext('2d'), cfg); cumCharts.push(ch); window.allCharts && window.allCharts.push(ch); };
 
-  mk('ch_cumLines', {
-    type: 'bar',
-    data: { labels, datasets: [
-      { type:'line', label:'Накопительно (записей)', data: cumLines, borderColor:C.red, backgroundColor:C.red+'22', borderWidth:3, tension:.3, fill:true, pointRadius:4, pointBackgroundColor:C.red, datalabels:{ color:dlDark, align:'top', anchor:'end', offset:4, font:{weight:'bold',size:11}, formatter:v=>v }, order:1 },
-      { type:'bar', label:'За период', data: perLines, backgroundColor:C.orange+'cc', borderRadius:5, datalabels:{ color:'#fff', textStrokeColor:'rgba(0,0,0,.4)', textStrokeWidth:2, anchor:'center', align:'center', font:{weight:'bold',size:10}, formatter:v=>v>0?v:'' }, order:2 },
-    ]},
-    options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, boxWidth:12, color:legCol } }, tooltip: tooltipCfg('зап.') },
-      scales:{ x:{ grid:{display:false}, ticks:{color:tick} }, y:{ ticks:{precision:0,color:tick}, beginAtZero:true } }, layout:{padding:{top:22}} }
-  });
+
   mk('ch_cumKg', {
     type: 'bar',
     data: { labels, datasets: [
@@ -4233,18 +4216,7 @@ const renderCumulative = () => {
       plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, boxWidth:12, color:legCol } }, tooltip: tooltipCfg('кг') },
       scales:{ x:{ grid:{display:false}, ticks:{color:tick} }, y:{ ticks:{callback:v=>fmt(v),color:tick}, beginAtZero:true } }, layout:{padding:{top:22}} }
   });
-  const firstPct = pct[0] || 0;
-  const target = pct.map((_, i) => Math.round(firstPct * (1 - 0.5 * i / Math.max(1, pct.length - 1)) * 10)/10);
-  mk('ch_cumPct', {
-    type: 'line',
-    data: { labels, datasets: [
-      { label:'Факт: доля «Невозможно установить», %', data: pct, borderColor:C.red, backgroundColor:C.red+'18', borderWidth:3, tension:.3, fill:true, pointRadius:5, pointBackgroundColor:C.red, datalabels:{ color:dlDark, align:'top', anchor:'end', offset:6, font:{weight:'bold',size:11}, formatter:v=>v+'%' } },
-      { label:'Ориентир (снижение)', data: target, borderColor:C.green, borderWidth:2, borderDash:[6,4], tension:0, pointRadius:0, fill:false, datalabels:{display:false} },
-    ]},
-    options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, boxWidth:12, color:legCol } }, tooltip:{ ...tooltipCfg('%'), callbacks:{ label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y}%` } } },
-      scales:{ x:{ grid:{display:false}, ticks:{color:tick} }, y:{ ticks:{callback:v=>v+'%',color:tick}, beginAtZero:true, suggestedMax: Math.max(...pct,10)+10 } }, layout:{padding:{top:24}} }
-  });
+
 };
 
 
