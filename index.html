@@ -4933,7 +4933,7 @@ const buildRecAnalytics = wb => {
     const sender = cleanSender(r['Отправитель']);
     const respDept = String(r['Ответственное подразделение'] || '').trim() || 'Не указано';
     const product = String(r['Продуктовое направление'] || '').trim() || 'Не указано';
-    const causeOccur = r['Коренная причина возникновения'] ? String(r['Коренная причина возникновения']).trim() : null;
+    const causeOccur = (r['Коренная причина возникновения'] || r['Корреная причина возникновения']) ? String(r['Коренная причина возникновения'] || r['Корреная причина возникновения']).trim() : null;
     const causeDetect = r['Коренная причина необнаружения'] ? String(r['Коренная причина необнаружения']).trim() : null;
     const corrAction = r['Корректирующие действия'] ? String(r['Корректирующие действия']).trim() : null;
     const mass = getMassNum(r['Масса металлоизделий с несоответствиями, кг']);
