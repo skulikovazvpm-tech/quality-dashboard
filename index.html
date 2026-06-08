@@ -1311,6 +1311,8 @@ const buildAnalytics = wb => {
   valid.forEach(r => {
     const t = detectType(r);
     const m = getMass(r['Кол., кг']);
+    const actNum = String(r['Номер']).toUpperCase();
+    const rowKey = `${actNum}|||${r['Дата']}|||${r['Номенклатура']}|||${m}`;
     const place = r['Склад (место возникновения)'];
     const unit = detectUnit(place);
     const def = ((r['Вид несоответствия'] || 'Не указано') + '').trim();
@@ -1384,14 +1386,14 @@ const buildAnalytics = wb => {
       // ── Накопительный трекер «Невозможно установить» (ответственность) ──
       const rawResp = r['Ответственная смена за несоответствие'];
       const unkFlag = isUnknownResp(rawResp);
-      allDailyEvents.push({ date: dayKey, kg: m });
+      allDailyEvents.push({ date: dayKey, kg: m, key: rowKey });
       if (!unkByMonth[monKey]) unkByMonth[monKey] = { lines: 0, kg: 0, acts: new Set(), totLines: 0, totKg: 0, totActs: new Set() };
       const um = unkByMonth[monKey];
       um.totLines++; um.totKg += m; um.totActs.add(num);
       if (unkFlag) {
         um.lines++; um.kg += m; um.acts.add(num);
         unkTotalLines++; unkTotalKg += m;
-        unkDailyEvents.push({ date: dayKey, kg: m });
+        unkDailyEvents.push({ date: dayKey, kg: m, key: rowKey });
         if (!unkByGroup[prod]) unkByGroup[prod] = { lines: 0, kg: 0 };
         unkByGroup[prod].lines++; unkByGroup[prod].kg += m;
         unkByDefect[def] = (unkByDefect[def] || 0) + 1;
@@ -4118,10 +4120,23 @@ const renderCumulative = () => {
   cumCharts.length = 0;
   const { unkEvents, allEvents, files, mode } = cumRawData;
 
+  // Дедупликация по ключу (Номер + Дата + Номенклатура + Масса)
+  const dedup = (arr) => {
+    const seen = new Set();
+    return arr.filter(e => {
+      if (!e.key) return true; // если ключа нет (старые данные), пропускаем как есть
+      if (seen.has(e.key)) return false;
+      seen.add(e.key);
+      return true;
+    });
+  };
+  const uniqueAll = dedup(allEvents);
+  const uniqueUnk = dedup(unkEvents);
+
   const buckets = {};
   const ensure = (pk) => { if (!buckets[pk.key]) buckets[pk.key] = { label: pk.label, sort: pk.sort, unkLines: 0, unkKg: 0, totLines: 0, totKg: 0 }; return buckets[pk.key]; };
-  allEvents.forEach(e => { const b = ensure(periodKey(e.date, cumPeriod)); b.totLines++; b.totKg += e.kg; });
-  unkEvents.forEach(e => { const b = ensure(periodKey(e.date, cumPeriod)); b.unkLines++; b.unkKg += e.kg; });
+  uniqueAll.forEach(e => { const b = ensure(periodKey(e.date, cumPeriod)); b.totLines++; b.totKg += e.kg; });
+  uniqueUnk.forEach(e => { const b = ensure(periodKey(e.date, cumPeriod)); b.unkLines++; b.unkKg += e.kg; });
   const sorted = Object.values(buckets).sort((a,b) => a.sort - b.sort);
 
   let cumL = 0, cumK = 0;
@@ -4133,7 +4148,7 @@ const renderCumulative = () => {
     perLines.push(b.unkLines); perKg.push(Math.round(b.unkKg));
     pct.push(b.totLines > 0 ? Math.round(b.unkLines / b.totLines * 1000)/10 : 0);
   });
-  const totUnkLines = cumL, totUnkKg = Math.round(cumK), totAll = allEvents.length;
+  const totUnkLines = cumL, totUnkKg = Math.round(cumK), totAll = uniqueAll.length;
   const periodNames = { week:'неделям', month:'месяцам', quarter:'кварталам', half:'полугодиям', year:'годам' };
   const srcLabel = mode === 'archive' ? `по ${files.length} файл(ам) архива` : 'по текущему файлу';
 
