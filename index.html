@@ -2381,7 +2381,7 @@ const renderDashboard = a => {
 
     ${a.unkCumulative && a.unkCumulative.length ? `
       <div class="pdf-section">
-        ${sectionHead(15, 'Контроль установления ответственности (целевой показатель ↓)', C.red, 'Накопительный учёт несоответствий с неустановленной ответственностью («Невозможно установить»).')}
+        ${sectionHead(15, 'Контроль установления ответственности (Невозможно установить ответственную смену за период)', C.red, 'Накопительный учёт несоответствий с неустановленной ответственностью («Невозможно установить»).')}
         <div class="unk-banner ${a.unkTotalLines > 0 ? 'unk-warn' : 'unk-ok'}">
           <div class="unk-banner-icon">${a.unkTotalLines > 0 ? '⚠️' : '✓'}</div>
           <div class="unk-banner-body">
