@@ -971,14 +971,20 @@ const corpusToUnit = n => {
 const detectUnit = place => {
   if (!place) return 'Не определено';
   const p = String(place).trim().toLowerCase();
-  if (p.includes('уми')) return 'УМИ';
-  if (p.includes('упн')) return 'УПН';
+  if (p.includes('уми') || p.includes('корпус №11') || p.includes('корпус №9')) return 'УМИ';
+  if (p.includes('упн') || p.includes('корпус №13')) return 'УПН';
   if (p.includes('цц') || p.includes('алмц') || p.includes('алцм') || p.includes('цгц')) return 'ЦГЦ';
   if (p.includes('логистик') || p.includes('сгп') || p.includes('склад гот')) return 'Логистика';
   if (p.includes('оэу')) return 'ОЭУ';
+  
+  // Try to extract corpus number if present
+  const m = p.match(/корпус\s*(?:№|#)?\s*(\d+)/i);
+  if (m) {
+    const unit = corpusToUnit(parseInt(m[1]));
+    if (unit) return unit;
+  }
+  
   if (p === 'не определено' || p === '') return 'Не определено';
-  const m = p.match(/корпус\s*№?\s*(\d+)/);
-  if (m) return corpusToUnit(parseInt(m[1])) || 'Не определено';
   return 'Не определено';
 };
 
